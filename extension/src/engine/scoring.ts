@@ -2,7 +2,7 @@
 // Points, badges, and streaks system
 
 import { Badge } from '../types';
-import { getDailyStats, saveDailyStats, addPoints, getBadges, saveBadges, getStreak, saveStreak } from '../storage/local-storage';
+import { getDailyStats, addPoints, getBadges, saveBadges, getStreak, saveStreak } from '../storage/local-storage';
 
 // Point values - can be tuned for balance
 export const SCORING = {

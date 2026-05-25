@@ -123,7 +123,7 @@ export function isQuietHours(settings: UserSettings): boolean {
  */
 export function selectBreakType(
   session: FocusSession,
-  settings: UserSettings
+  _settings: UserSettings
 ): typeof BREAK_TYPES[0] {
   const sitTimeMinutes = session.sitTimeMinutes;
   
@@ -172,10 +172,10 @@ export interface RulesEngineResult {
 export function evaluateState(
   session: FocusSession,
   settings: UserSettings,
-  dailyStats: { movementBreaks: number; skippedReminders: number }
+  _dailyStats: { movementBreaks: number; skippedReminders: number }
 ): RulesEngineResult {
   const { currentState, sitTimeMinutes, breakStartTime } = session;
-  const { reminderIntervalMinutes, breakDurationMinutes, driftWarningMinutes, reminderTone } = settings;
+  const { reminderIntervalMinutes, driftWarningMinutes, reminderTone } = settings;
   
   // Default result
   const defaultResult: RulesEngineResult = {

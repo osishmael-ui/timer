@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SessionState, FocusSession, DailyStats } from '../types';
 import { getSession, getDailyStats, getTotalPoints, getStreak } from '../storage/local-storage';
 
@@ -310,21 +310,21 @@ export default function Popup() {
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-mint-600 mb-1">
-                <Award size={16} />
+                <AwardIcon />
                 <span className="text-xs font-medium">Move Score</span>
               </div>
               <div className="text-2xl font-bold text-mint-700">{moveScore}</div>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-orange-500 mb-1">
-                <Flame size={16} />
+                <FlameIcon />
                 <span className="text-xs font-medium">Streak</span>
               </div>
               <div className="text-2xl font-bold text-orange-600">{streak}d</div>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-lavender-600 mb-1">
-                <Award size={16} />
+                <AwardIcon />
                 <span className="text-xs font-medium">Points</span>
               </div>
               <div className="text-2xl font-bold text-lavender-700">{totalPoints}</div>

@@ -63,10 +63,6 @@ async function handleTimerTick(): Promise<void> {
   // Update sit time based on elapsed time
   const now = Date.now();
   const elapsedSinceStart = (now - session.startedAt) / 1000 / 60; // minutes
-  const elapsedSinceBreak = session.lastBreakAt 
-    ? (now - session.lastBreakAt) / 1000 / 60 
-    : elapsedSinceStart;
-  
   // Update session with new sit time
   const updatedSession = await updateSession({
     sitTimeMinutes: Math.floor(elapsedSinceStart),
@@ -143,7 +139,7 @@ async function showNotification(
   message: string,
   playSound: boolean
 ): Promise<void> {
-  const options: chrome.notifications.NotificationOptions = {
+  const options: chrome.notifications.NotificationOptions<true> = {
     type: 'basic',
     iconUrl: 'icons/icon48.png',
     title,
@@ -156,13 +152,13 @@ async function showNotification(
 }
 
 // Handle messages from popup/options
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   handleMessage(message).then(sendResponse);
   return true; // Keep channel open for async response
 });
 
 async function handleMessage(message: { type: string; payload?: any }): Promise<any> {
-  const { type, payload } = message;
+  const { type } = message;
   
   switch (type) {
     case 'START_SESSION':
@@ -239,7 +235,6 @@ async function endSession(): Promise<FocusSession> {
 
 // Start a movement break
 async function startBreak(): Promise<FocusSession> {
-  const session = await getSession();
   const now = Date.now();
   
   const updated = await updateSession({
@@ -339,8 +334,6 @@ async function skipReminder(): Promise<FocusSession> {
 
 // Return from drift state
 async function returnFromDrift(): Promise<FocusSession> {
-  const session = await getSession();
-  
   // Still award partial points for returning
   await addPoints(3); // Small bonus for returning even after drift
   
