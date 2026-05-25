@@ -22,7 +22,7 @@ const DEFAULT_SESSION: FocusSession = {
   currentState: 'idle',
   skippedReminders: 0,
   completedBreaks: 0,
-  sitTimeMinutes: 0,
+  focusTimeMinutes: 0,
   breakStartTime: null,
 };
 

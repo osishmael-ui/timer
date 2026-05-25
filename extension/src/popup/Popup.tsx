@@ -11,18 +11,18 @@ interface PopupState {
 
 const STATE_LABELS: Record<SessionState, string> = {
   idle: 'Ready to Focus',
-  focus: 'In Flow',
-  'sitting-too-long': 'Time to Move',
+  focus: 'Focus Mode',
+  'movement-nudge': 'Movement Nudge',
   'break-suggested': 'Break Ready',
-  'break-active': 'Breaking...',
-  'break-drifting': 'Come Back!',
-  returned: 'Welcome Back',
+  'break-active': 'Break Active',
+  'break-drifting': 'Break Drifting',
+  returned: 'Good Reset',
 };
 
 const STATE_COLORS: Record<SessionState, string> = {
   idle: 'bg-gray-100 text-gray-700',
   focus: 'bg-sky-100 text-sky-700',
-  'sitting-too-long': 'bg-orange-100 text-orange-700',
+  'movement-nudge': 'bg-orange-100 text-orange-700',
   'break-suggested': 'bg-lime-100 text-lime-700',
   'break-active': 'bg-emerald-100 text-emerald-700',
   'break-drifting': 'bg-red-100 text-red-700',
@@ -212,9 +212,9 @@ export default function Popup() {
               
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-sky-50 rounded-lg p-3 text-center">
-                  <div className="text-xs text-sky-600 mb-1">Sit Time</div>
+                  <div className="text-xs text-sky-600 mb-1">Focus Time</div>
                   <div className="text-lg font-semibold text-sky-700">
-                    {session.sitTimeMinutes} min
+                    {session.focusTimeMinutes} min
                   </div>
                 </div>
                 <div className="bg-lime-50 rounded-lg p-3 text-center">
@@ -237,21 +237,21 @@ export default function Popup() {
                     </button>
                 )}
 
-                {(currentState === 'sitting-too-long' || currentState === 'break-suggested') && (
+                {(currentState === 'movement-nudge' || currentState === 'break-suggested') && (
                   <>
                     <button
                       onClick={handleStartBreak}
                       className="w-full py-3 px-4 bg-lime-500 hover:bg-lime-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
                     >
                       <CoffeeIcon />
-                      Start Break
+                      Start 2-min Break
                     </button>
                     <button
                       onClick={handleSkipReminder}
                       className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
                     >
                       <SkipForwardIcon />
-                      Skip for Now
+                      Delay 10 min
                     </button>
                   </>
                 )}
@@ -263,7 +263,7 @@ export default function Popup() {
                       className="w-full py-3 px-4 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
                     >
                       <CheckCircleIcon />
-                      Complete Break & Return
+                      Back to Work
                     </button>
                   </>
                 )}
@@ -275,7 +275,7 @@ export default function Popup() {
                       className="w-full py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
                     >
                       <TrendingUpIcon />
-                      Return to Work
+                      Back to Work
                     </button>
                   </>
                 )}
@@ -334,7 +334,7 @@ export default function Popup() {
       </div>
 
       {/* Suggested Break */}
-      {(currentState === 'sitting-too-long' || currentState === 'break-suggested') && (
+      {(currentState === 'movement-nudge' || currentState === 'break-suggested') && (
         <div className="px-4 pb-4">
           <div className="bg-lime-50 rounded-2xl p-4 border border-lime-200">
             <div className="text-sm text-lime-800 font-medium mb-1">Suggested Reset</div>

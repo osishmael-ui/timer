@@ -4,7 +4,7 @@
 export type SessionState = 
   | 'idle'
   | 'focus'
-  | 'sitting-too-long'
+  | 'movement-nudge'
   | 'break-suggested'
   | 'break-active'
   | 'break-drifting'
@@ -31,7 +31,7 @@ export interface FocusSession {
   currentState: SessionState;
   skippedReminders: number;
   completedBreaks: number;
-  sitTimeMinutes: number;
+  focusTimeMinutes: number;             // Renamed from sitTimeMinutes
   breakStartTime: number | null;        // When current break started
 }
 
