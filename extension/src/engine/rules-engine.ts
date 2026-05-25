@@ -24,7 +24,7 @@ const REMINDER_MESSAGES = {
   ],
   direct: [
     'Stand up for 2 minutes.',
-    'You have been sitting too long. Move briefly, then return.',
+    'You have been in focus mode a while. Move briefly, then return.',
     'Time for a movement break now.',
     'Get up and move for a few minutes.',
   ],
@@ -125,10 +125,10 @@ export function selectBreakType(
   session: FocusSession,
   _settings: UserSettings
 ): typeof BREAK_TYPES[0] {
-  const sitTimeMinutes = session.sitTimeMinutes;
+  const focusTimeMinutes = session.focusTimeMinutes;
   
   // After very long sessions, suggest longer break
-  if (sitTimeMinutes >= 90) {
+  if (focusTimeMinutes >= 90) {
     const longerBreak = BREAK_TYPES.find(b => b.condition === 'longSession');
     if (longerBreak) return longerBreak;
   }
@@ -174,7 +174,7 @@ export function evaluateState(
   settings: UserSettings,
   _dailyStats: { movementBreaks: number; skippedReminders: number }
 ): RulesEngineResult {
-  const { currentState, sitTimeMinutes, breakStartTime } = session;
+  const { currentState, focusTimeMinutes, breakStartTime } = session;
   const { reminderIntervalMinutes, driftWarningMinutes, reminderTone } = settings;
   
   // Default result
@@ -194,8 +194,8 @@ export function evaluateState(
       return defaultResult;
     
     case 'focus': {
-      // Check if sitting too long
-      if (sitTimeMinutes >= reminderIntervalMinutes) {
+      // Check if focus session has run long without a break
+      if (focusTimeMinutes >= reminderIntervalMinutes) {
         // Consider skip history - more skips = higher urgency
         const recentSkips = session.skippedReminders;
         const urgency: 'low' | 'medium' | 'high' = 
@@ -203,7 +203,7 @@ export function evaluateState(
         
         return {
           shouldRemind: true,
-          nextState: 'sitting-too-long',
+          nextState: 'movement-nudge',
           suggestedBreak: selectBreakType(session, settings),
           message: getReminderMessage(reminderTone),
           urgency,
@@ -212,7 +212,7 @@ export function evaluateState(
       return defaultResult;
     }
     
-    case 'sitting-too-long':
+    case 'movement-nudge':
       // Auto-transition to break suggested after a moment
       return {
         shouldRemind: true,
@@ -280,14 +280,14 @@ export function getRecommendedBreakDuration(
   session: FocusSession,
   settings: UserSettings
 ): number {
-  const { sitTimeMinutes } = session;
+  const { focusTimeMinutes } = session;
   const { breakDurationMinutes } = settings;
   
   // Base duration from settings
   let duration = breakDurationMinutes;
   
   // Extend slightly for very long sessions
-  if (sitTimeMinutes >= 90) {
+  if (focusTimeMinutes >= 90) {
     duration = Math.min(duration + 2, 5);
   }
   
@@ -320,7 +320,7 @@ export function shouldEncourageEarlyBreak(
   // Afternoon slump period (2pm - 4pm)
   if (hourOfDay >= 14 && hourOfDay <= 16) {
     // Encourage break 10 minutes early
-    return session.sitTimeMinutes >= (settings.reminderIntervalMinutes - 10);
+    return session.focusTimeMinutes >= (settings.reminderIntervalMinutes - 10);
   }
   
   return false;

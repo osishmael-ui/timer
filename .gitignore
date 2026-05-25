@@ -1,40 +1,38 @@
 ```
 # Dependencies
 node_modules/
-extension/node_modules/
-landing/node_modules/
 
-# Build outputs
+# Build artifacts
 dist/
 build/
-extension/dist/
-landing/dist/
-
-# TypeScript/JavaScript cache
+*.js.map
 *.tsbuildinfo
-.cache/
 
-# Environment variables
+# Environment
 .env
 .env.local
 *.env.*
 
-# IDE files
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
-*.tmp
 
 # Logs
 *.log
 
-# Coverage reports
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Python caches (if any Python files exist in the project)
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -43,35 +41,42 @@ __pycache__/
 *.so
 *.egg-info/
 .eggs/
-
-# Distribution / packaging
-*.tar.gz
-*.whl
+.venv/
+venv/
 pip-log.txt
 pip-delete-this-directory.txt
+.tox/
+.coverage*
+.nox/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
 
-# Unit test / coverage reports
-.junit.xml
-coverage.xml
-*.cover
-*.gcov
-*.lcov
-
-# Dependency directories
+# Node.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 node_modules/
 jspm_packages/
+*.tsv
+*.csv
 
-# TypeScript specific
-*.tsbuildinfo
-.nyc_output
+# Web
+*.min.js
+*.min.css
+/public/build/
 
-# Vite specific
-!.vite/
+# Testing
+coverage/
+junit.xml
+coverage.xml
 
 # OS generated files
 .DS_Store
-Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 ehthumbs.db
-Icon?
-apidoc/
+Thumbs.db
 ```

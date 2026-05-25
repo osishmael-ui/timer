@@ -18,14 +18,12 @@ export const SCORING = {
 export const BADGE_DEFINITIONS: Omit<Badge, 'earned' | 'earnedAt'>[] = [
   { id: 'first-stand', name: 'First Stand', description: 'Complete your first stand break' },
   { id: 'flow-saver', name: 'Flow Saver', description: 'Return from break in under 3 minutes' },
-  { id: 'no-zombie-sitting', name: 'No Zombie Sitting', description: 'Take a break before 60 minutes of sitting' },
+  { id: 'chair-defeated', name: 'Chair Defeated', description: 'Earn 500 total points' },
   { id: 'three-tiny-resets', name: '3 Tiny Resets', description: 'Complete 3 short breaks in one day' },
   { id: 'deep-work-defender', name: 'Deep Work Defender', description: 'Complete a 90+ minute focus session with breaks' },
   { id: 'back-before-drift', name: 'Back Before Drift', description: 'Return before drift warning 5 times' },
   { id: 'five-day-streak', name: '5-Day Movement Streak', description: 'Use StandLoop 5 days in a row' },
-  { id: 'chair-defeated', name: 'Chair Defeated', description: 'Earn 500 total points' },
   { id: 'tiny-reset-pro', name: 'Tiny Reset Pro', description: 'Complete 20 short breaks total' },
-  { id: 'builder-in-motion', name: 'Builder in Motion', description: 'Earn all other badges' },
 ];
 
 // Award points for taking a stand break on time
@@ -86,8 +84,8 @@ export async function checkAndAwardBadges(
   // Flow Saver - 5 flow safe returns
   tryAwardBadge(BADGE_DEFINITIONS[1], flowSafeReturns >= 5);
 
-  // No Zombie Sitting - took break before 60 min (tracked elsewhere, simplified here)
-  // This would need more complex tracking, simplified for MVP
+  // Chair Defeated - 500 total points
+  tryAwardBadge(BADGE_DEFINITIONS[2], totalPoints >= 500);
 
   // Three Tiny Resets - 3 breaks today
   tryAwardBadge(BADGE_DEFINITIONS[3], dailyBreaks >= 3);
@@ -101,16 +99,8 @@ export async function checkAndAwardBadges(
   // Five Day Streak
   tryAwardBadge(BADGE_DEFINITIONS[6], streak >= 5);
 
-  // Chair Defeated - 500 total points
-  tryAwardBadge(BADGE_DEFINITIONS[7], totalPoints >= 500);
-
   // Tiny Reset Pro - 20 total breaks
-  tryAwardBadge(BADGE_DEFINITIONS[8], totalBreaks >= 20);
-
-  // Builder in Motion - all other badges
-  const allOtherBadgeIds = BADGE_DEFINITIONS.slice(0, -1).map(b => b.id);
-  const allOthersEarned = allOtherBadgeIds.every(id => earnedBadgeIds.has(id));
-  tryAwardBadge(BADGE_DEFINITIONS[9], allOthersEarned);
+  tryAwardBadge(BADGE_DEFINITIONS[7], totalBreaks >= 20);
 
   if (newBadges.length > 0) {
     const updatedBadges = [...currentBadges, ...newBadges];

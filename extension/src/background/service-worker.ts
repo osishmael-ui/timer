@@ -60,12 +60,12 @@ async function handleTimerTick(): Promise<void> {
   const settings = await getSettings();
   const dailyStats = await getDailyStats();
   
-  // Update sit time based on elapsed time
+  // Update focus time based on elapsed time
   const now = Date.now();
   const elapsedSinceStart = (now - session.startedAt) / 1000 / 60; // minutes
-  // Update session with new sit time
+  // Update session with new focus time
   const updatedSession = await updateSession({
-    sitTimeMinutes: Math.floor(elapsedSinceStart),
+    focusTimeMinutes: Math.floor(elapsedSinceStart),
   });
   
   // Evaluate state using rules engine
@@ -105,7 +105,7 @@ async function handleStateTransition(
   console.log(`State transition: ${fromState} -> ${toState}`);
   
   switch (toState) {
-    case 'sitting-too-long':
+    case 'movement-nudge':
     case 'break-suggested':
       // Show notification
       await showNotification(
@@ -199,7 +199,7 @@ async function startSession(): Promise<FocusSession> {
     currentState: 'focus',
     skippedReminders: 0,
     completedBreaks: 0,
-    sitTimeMinutes: 0,
+    focusTimeMinutes: 0,
     breakStartTime: null,
   };
   
@@ -223,7 +223,7 @@ async function endSession(): Promise<FocusSession> {
   const stats = await getDailyStats();
   const focusMinutes = session.active 
     ? Math.floor((Date.now() - session.startedAt) / 1000 / 60)
-    : session.sitTimeMinutes;
+    : session.focusTimeMinutes;
   
   await saveDailyStats({
     ...stats,
@@ -286,7 +286,7 @@ async function completeBreak(): Promise<FocusSession> {
     totalPoints,
     session.completedBreaks + 1,
     streak,
-    session.sitTimeMinutes
+    session.focusTimeMinutes
   );
   
   // Update streak
