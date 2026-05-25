@@ -1,11 +1,10 @@
 // State machine and scoring logic for StandLoop
-import { 
+import type { 
   AppState, 
   SessionState, 
-  SCORING, 
-  BADGES,
-  ActiveSession,
-  DailyStats,
+} from '../types';
+import { 
+  SCORING,
   DEFAULT_ACTIVE_SESSION 
 } from '../types';
 
@@ -125,17 +124,17 @@ export const checkDriftStatus = (state: AppState): AppState => {
  * This is where scoring happens
  */
 export const returnToWork = (state: AppState): AppState => {
-  const { breakStartedAt, currentState } = state.activeSession;
-  const { breakDurationMinutes, driftThresholdMinutes } = state.settings;
+  const { breakStartedAt } = state.activeSession;
+  const { driftThresholdMinutes } = state.settings;
   
   let pointsEarned = 0;
   let newBadges = [...state.badges];
   let badgesEarnedThisReturn: string[] = [];
   
   // Calculate break duration
-  let breakDurationMinutes = 0;
+  let breakDurationMins = 0;
   if (breakStartedAt) {
-    breakDurationMinutes = (Date.now() - breakStartedAt) / 1000 / 60;
+    breakDurationMins = (Date.now() - breakStartedAt) / 1000 / 60;
   }
   
   // Award points based on behavior
@@ -144,16 +143,16 @@ export const returnToWork = (state: AppState): AppState => {
     pointsEarned += SCORING.respondToNudge;
     
     // Points for completing a short break (2-5 minutes)
-    if (breakDurationMinutes >= 2 && breakDurationMinutes <= 5) {
+    if (breakDurationMins >= 2 && breakDurationMins <= 5) {
       pointsEarned += SCORING.completeShortBreak;
     }
     
     // Bonus for returning before drift
-    if (breakDurationMinutes < driftThresholdMinutes) {
+    if (breakDurationMins < driftThresholdMinutes) {
       pointsEarned += SCORING.returnBeforeDrift;
       
       // Check for Flow Saver badge (return under 3 minutes)
-      if (breakDurationMinutes < 3 && !state.badges.includes('flow-saver')) {
+      if (breakDurationMins < 3 && !state.badges.includes('flow-saver')) {
         newBadges.push('flow-saver');
         badgesEarnedThisReturn.push('flow-saver');
       }
@@ -264,8 +263,8 @@ export const updateFocusTime = (state: AppState, minutes: number): AppState => {
 /**
  * Get reminder message based on tone setting
  */
-export const getReminderMessage = (tone: 'gentle' | 'direct' | 'playful', state: SessionState): string => {
-  const messages = {
+export const getReminderMessage = (tone: 'gentle' | 'direct' | 'playful', sessionState: SessionState): string => {
+  const messages: Record<'gentle' | 'direct' | 'playful', Record<string, string>> = {
     gentle: {
       'movement-nudge': 'Good moment for a short stand reset.',
       'break-drifting': 'Your break is getting long. Come back when you are ready.',
@@ -280,7 +279,7 @@ export const getReminderMessage = (tone: 'gentle' | 'direct' | 'playful', state:
     },
   };
   
-  return messages[tone][state] || 'Time for a change.';
+  return messages[tone][sessionState] || 'Time for a change.';
 };
 
 /**

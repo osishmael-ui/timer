@@ -1,5 +1,6 @@
 // localStorage wrapper for StandLoop data persistence
-import { AppState, DEFAULT_SETTINGS, DEFAULT_ACTIVE_SESSION } from '../types';
+import type { AppState } from '../types';
+import { DEFAULT_SETTINGS, DEFAULT_ACTIVE_SESSION } from '../types';
 
 const STORAGE_KEY = 'standloop-state';
 

@@ -1,34 +1,46 @@
-```
+```gitignore
 # Dependencies
 node_modules/
 
-# Build outputs
+# Build artifacts
 dist/
 build/
-coverage/
-htmlcov/
+*.js.map
+*.ts.map
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# IDE and editor files
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Logs and temp files
+*.log
 *.tmp
 
-# Python cache
+# Python (if present)
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Logs
-*.log
+.Python
+*.so
 
 # Coverage
+coverage/
+htmlcov/
 .coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+*.pytest_cache/
+.mypy_cache/
 ```
