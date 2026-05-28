@@ -143,7 +143,7 @@ export const generateDailyPlan = (input: DailySetupInput): DailyPlan => {
   const backupMinutes = Math.max(25, Math.min(45, Math.floor(focusMinutes * 0.75)));
   const backupWindow = findBestWindow(afterMain, peakWindows, backupMinutes, input.workType);
   const backupDeepWorkBlock = backupWindow
-    ? makeBlock('backup-deep-work', 'Backup deep-work block', backupWindow.start, backupWindow.start + backupMinutes, 'backupDeepWork', 'A second chance if the first block gets squeezed.')
+    ? makeBlock('backup-deep-work', 'Fallback focus block (if needed)', backupWindow.start, backupWindow.start + backupMinutes, 'backupDeepWork', 'Only use this if the primary focus block gets missed or interrupted.')
     : null;
   const secondMovementBreak = backupDeepWorkBlock
     ? makeMovementAfterBlock(backupDeepWorkBlock, fixedWindows, [firstMovementBreak].filter((block): block is DailyPlanBlock => Boolean(block)), movementMinutes, input, workday, 2)

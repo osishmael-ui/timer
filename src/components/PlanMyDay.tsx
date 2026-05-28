@@ -675,7 +675,7 @@ const PlanReview = ({
     )}
     <div className="grid gap-3 md:grid-cols-2">
       <SummaryTile label="Best block" value={formatBlock(plan.mainDeepWorkBlock)} />
-      <SummaryTile label="Backup block" value={formatBlock(plan.backupDeepWorkBlock)} />
+      <SummaryTile label="Fallback (if needed)" value={formatBlock(plan.backupDeepWorkBlock)} />
       {plan.secondaryFocusBlock && <SummaryTile label="Optional focus" value={formatBlock(plan.secondaryFocusBlock)} />}
       <SummaryTile label="Minimum win" value={plan.minimumWin} />
       <SummaryTile label="Confidence" value={plan.confidenceLevel} />
@@ -824,7 +824,7 @@ const formatBlock = (block: DailyPlanBlock | null): string => block ? `${block.s
 const kindLabel = (kind: DailyPlanBlock['kind']): string => {
   if (kind === 'admin') return 'support work';
   if (kind === 'deepWork') return 'deep work';
-  if (kind === 'backupDeepWork') return 'backup deep work';
+  if (kind === 'backupDeepWork') return 'fallback focus';
   if (kind === 'secondaryFocus') return 'secondary focus';
   return kind.replace(/([A-Z])/g, ' $1');
 };
