@@ -1,38 +1,70 @@
 import React from 'react';
+import type { UserSettings } from '../types';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  settings: {
-    focusIntervalMinutes: number;
-    breakDurationMinutes: number;
-    driftThresholdMinutes: number;
-    reminderTone: 'gentle' | 'direct' | 'playful';
-    soundEnabled: boolean;
-    notificationsEnabled: boolean;
-    gamificationEnabled: boolean;
-  };
-  onSave: (settings: any) => void;
+  settings: UserSettings;
+  notificationPermission: NotificationPermission | 'unsupported';
+  onSave: (settings: UserSettings) => Promise<boolean> | boolean;
   onResetData: () => void;
+  onExportData: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   settings,
+  notificationPermission,
   onSave,
   onResetData,
+  onExportData,
 }) => {
-  const [localSettings, setLocalSettings] = React.useState(settings);
-
-  React.useEffect(() => {
-    setLocalSettings(settings);
-  }, [settings]);
-
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <SettingsModalContent
+      onClose={onClose}
+      settings={settings}
+      notificationPermission={notificationPermission}
+      onSave={onSave}
+      onResetData={onResetData}
+      onExportData={onExportData}
+    />
+  );
+};
+
+const SettingsModalContent: React.FC<Omit<SettingsModalProps, 'isOpen'>> = ({
+  onClose,
+  settings,
+  notificationPermission,
+  onSave,
+  onResetData,
+  onExportData,
+}) => {
+  const [localSettings, setLocalSettings] = React.useState<UserSettings>(settings);
+  const [saveError, setSaveError] = React.useState('');
+
+  const notificationStatusText = (() => {
+    if (notificationPermission === 'unsupported') return 'Not supported in this browser';
+    if (notificationPermission === 'granted') return 'Allowed';
+    if (notificationPermission === 'denied') return 'Blocked by browser';
+    return 'Will ask when enabled';
+  })();
+
+  const saveChanges = async () => {
+    setSaveError('');
+    const saved = await onSave(localSettings);
+    if (saved) {
+      onClose();
+      return;
+    }
+    setSaveError('Browser notifications are blocked or unavailable, so they were left off.');
+    setLocalSettings((current) => ({ ...current, notificationsEnabled: false }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-navy/60 backdrop-blur-sm"
@@ -40,7 +72,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       />
       
       {/* Modal */}
-      <div className="relative glass rounded-3xl p-6 w-full max-w-lg shadow-2xl animate-float">
+      <div className="relative glass max-h-[94vh] w-full max-w-lg overflow-hidden rounded-3xl p-5 shadow-2xl sm:p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-charcoal flex items-center gap-2">
@@ -62,7 +94,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Settings Content */}
-        <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
+        <div className="max-h-[64vh] space-y-5 overflow-y-auto pr-1 sm:pr-2">
           {/* Focus Interval */}
           <div>
             <label className="block text-sm font-medium text-charcoal mb-2">
@@ -119,13 +151,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className="block text-sm font-medium text-charcoal mb-2">
               Reminder Tone
             </label>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {(['gentle', 'direct', 'playful'] as const).map((tone) => (
                 <button
                   key={tone}
                   onClick={() => setLocalSettings({ ...localSettings, reminderTone: tone })}
                   className={`
-                    flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all
+                    flex-1 py-2 px-3 rounded-full text-sm font-medium transition-all
                     ${localSettings.reminderTone === tone
                       ? 'bg-sky-500 text-white shadow-md'
                       : 'bg-charcoal/10 text-charcoal hover:bg-charcoal/20'
@@ -142,7 +174,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-3">
             {[
               { key: 'soundEnabled', label: 'Sound Effects', icon: '🔊' },
-              { key: 'notificationsEnabled', label: 'Browser Notifications', icon: '🔔' },
               { key: 'gamificationEnabled', label: 'Gamification (Points & Badges)', icon: '🎮' },
             ].map(({ key, label, icon }) => (
               <div key={key} className="flex items-center justify-between">
@@ -163,38 +194,88 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               </div>
             ))}
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-charcoal flex items-center gap-2">
+                  <span>🔔</span> Browser Notifications
+                </span>
+                <button
+                  onClick={() => setLocalSettings({ ...localSettings, notificationsEnabled: !localSettings.notificationsEnabled })}
+                  className={`
+                    relative h-6 w-12 shrink-0 rounded-full transition-colors
+                    ${localSettings.notificationsEnabled ? 'bg-lime-500' : 'bg-charcoal/30'}
+                  `}
+                  aria-label="Toggle browser notifications"
+                >
+                  <div className={`
+                    absolute top-1 h-4 w-4 rounded-full bg-white transition-transform
+                    ${localSettings.notificationsEnabled ? 'left-7' : 'left-1'}
+                  `} />
+                </button>
+              </div>
+              <p className="mt-2 text-xs font-semibold text-charcoal/55">{notificationStatusText}</p>
+              {notificationPermission === 'denied' && (
+                <p className="mt-1 text-xs font-semibold text-coral-500">Change browser site permissions to enable notifications again.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-sky-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-600">Data Transparency</p>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-charcoal/60">
+              Qithym stores settings, history, streaks, and rewards under your account ID. Cloud sync is prepared for future clients, but this build stores account data locally in this browser.
+            </p>
+            <button
+              onClick={onExportData}
+              className="mt-3 min-h-10 w-full rounded-full bg-white px-4 text-sm font-black text-sky-600 ring-1 ring-sky-100 transition-colors hover:bg-sky-50"
+            >
+              Export Account Data
+            </button>
+          </div>
+
+          <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-slate-200">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-charcoal/45">Feedback</p>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-charcoal/60">
+              Send bug reports, confusing moments, or reward ideas.
+            </p>
+            <a
+              href="mailto:support@qithym.app?subject=Qithym%20feedback"
+              className="mt-3 block min-h-10 rounded-xl bg-slate-100 px-4 py-2.5 text-center text-sm font-black text-charcoal transition-colors hover:bg-slate-200"
+            >
+              Contact Support
+            </a>
           </div>
 
           {/* Danger Zone */}
           <div className="pt-4 border-t border-charcoal/10">
             <button
               onClick={() => {
-                if (confirm('Are you sure? This will delete all your data.')) {
+                if (confirm('Reset timer data for this account on this device? Your account will remain active.')) {
                   onResetData();
                   onClose();
                 }
               }}
-              className="w-full py-2 px-4 bg-coral-500/10 text-coral-500 rounded-xl text-sm font-medium hover:bg-coral-500/20 transition-colors"
+              className="w-full py-2 px-4 bg-coral-500/10 text-coral-500 rounded-full text-sm font-medium hover:bg-coral-500/20 transition-colors"
             >
-              Reset All Data
+              Reset Timer Data
             </button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 mt-6">
+        {saveError && (
+          <p className="mt-4 rounded-xl bg-coral-500/10 px-3 py-2 text-sm font-semibold text-coral-500">{saveError}</p>
+        )}
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
             onClick={onClose}
-            className="flex-1 py-3 px-4 bg-charcoal/10 text-charcoal rounded-xl font-medium hover:bg-charcoal/20 transition-colors"
+            className="min-h-12 rounded-full bg-charcoal/10 px-4 font-medium text-charcoal transition-colors hover:bg-charcoal/20"
           >
             Cancel
           </button>
           <button
-            onClick={() => {
-              onSave(localSettings);
-              onClose();
-            }}
-            className="flex-1 py-3 px-4 bg-sky-500 text-white rounded-xl font-medium hover:bg-sky-600 shadow-lg shadow-sky-500/30 transition-colors"
+            onClick={saveChanges}
+            className="min-h-12 rounded-full bg-sky-500 px-4 font-medium text-white shadow-lg shadow-sky-500/30 transition-colors hover:bg-sky-600"
           >
             Save Changes
           </button>

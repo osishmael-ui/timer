@@ -17,7 +17,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   children,
   className = '',
 }) => {
-  const baseStyles = 'font-semibold rounded-xl transition-all duration-200 transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const baseStyles = 'font-semibold rounded-full transition-all duration-200 transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2';
   
   const variants = {
     primary: 'bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/30 focus:ring-sky-500',

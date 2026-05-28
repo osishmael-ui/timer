@@ -5,7 +5,7 @@ interface CompanionOrbProps {
 }
 
 /**
- * Loop Spark - Abstract visual companion for StandLoop
+ * Loop Spark - Abstract visual companion for Qithym
  * A simple, cute but builder-friendly mascot made with CSS/SVG
  */
 export const CompanionOrb: React.FC<CompanionOrbProps> = ({ state }) => {

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepwork-scheduler"
+version = "0.1.0"
+description = "Deterministic, evidence-catalog-driven daily deep-work scheduler."
+requires-python = ">=3.12"
+readme = "README.md"
+authors = [{ name = "Deep Work Scheduler" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "mypy>=1.8"]
+
+[project.scripts]
+deepwork-scheduler = "deepwork_scheduler.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["deepwork_scheduler*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,72 @@
+{
+  "user_id": "example-user",
+  "date": "2026-05-26",
+  "timezone": "Asia/Hong_Kong",
+  "workday_start": "09:00",
+  "workday_end": "17:30",
+  "chronotype": "intermediate",
+  "preferred_peak_windows": [],
+  "bedtime_target": "23:00",
+  "wake_time_target": "07:00",
+  "sleep_hours_last_night": 6.4,
+  "sleep_quality": 3,
+  "recent_sleep_pattern": "irregular",
+  "nap_preference": "maybe",
+  "caffeine_sensitive": "medium",
+  "last_caffeine_time": "16:30",
+  "environment": {
+    "daylight_access": "low",
+    "workspace_noise": "medium",
+    "speech_noise_present": true,
+    "interruption_load": "medium",
+    "urgent_channel_available": true,
+    "screen_exposure_evening": "medium"
+  },
+  "user_profile": {
+    "distractibility": "medium",
+    "age_band": null,
+    "health_flags": [],
+    "telepressure_sensitivity": "high"
+  },
+  "fixed_commitments": [
+    { "start": "11:00", "end": "11:30", "title": "Planning" }
+  ],
+  "tasks": [
+    {
+      "id": "deep1",
+      "title": "Architecture memo",
+      "task_type": "writing",
+      "complexity": "high",
+      "priority": "high",
+      "estimated_minutes": 120,
+      "deadline": "2026-05-26T18:00:00+08:00",
+      "challenge_level": "high",
+      "skill_confidence": "medium",
+      "requires_uninterrupted_time": true
+    },
+    {
+      "id": "code1",
+      "title": "Prototype scheduler API",
+      "task_type": "coding",
+      "complexity": "medium",
+      "priority": "high",
+      "estimated_minutes": 90,
+      "deadline": "2026-05-26T17:00:00+08:00",
+      "challenge_level": "medium",
+      "skill_confidence": "medium",
+      "requires_uninterrupted_time": true
+    },
+    {
+      "id": "admin1",
+      "title": "Inbox review",
+      "task_type": "communication",
+      "complexity": "low",
+      "priority": "medium",
+      "estimated_minutes": 30,
+      "deadline": "2026-05-26T17:30:00+08:00",
+      "challenge_level": "low",
+      "skill_confidence": "high",
+      "requires_uninterrupted_time": false
+    }
+  ]
+}

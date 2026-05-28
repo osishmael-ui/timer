@@ -1,4 +1,4 @@
-// State machine and scoring logic for StandLoop
+// State machine and scoring logic for Qithym
 import type { 
   AppState, 
   SessionState, 
@@ -21,20 +21,56 @@ import {
  * - session-complete: Session has ended
  */
 
+const getTodayDateString = (): string => new Date().toISOString().split('T')[0];
+
+const addDays = (dateString: string, days: number): string => {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+};
+
+const updateStreakForActiveDay = (state: AppState): Pick<AppState, 'currentStreak' | 'lastActiveDate' | 'lastStreakDate'> => {
+  const today = getTodayDateString();
+
+  if (state.lastStreakDate === today) {
+    return {
+      currentStreak: state.currentStreak,
+      lastActiveDate: today,
+      lastStreakDate: state.lastStreakDate,
+    };
+  }
+
+  const isConsecutive = state.lastStreakDate ? addDays(state.lastStreakDate, 1) === today : false;
+
+  return {
+    currentStreak: isConsecutive ? state.currentStreak + 1 : 1,
+    lastActiveDate: today,
+    lastStreakDate: today,
+  };
+};
+
 export const startFocusSession = (state: AppState): AppState => {
+  const now = Date.now();
+
   return {
     ...state,
     activeSession: {
       ...state.activeSession,
       active: true,
-      startedAt: Date.now(),
+      startedAt: now,
+      accumulatedFocusSeconds: 0,
+      focusStartedAt: now,
+      focusMinutesCredited: 0,
       currentState: 'focus',
-      lastBreakAt: Date.now(),
+      lastBreakAt: now,
       breakStartedAt: null,
       skippedReminders: 0,
       completedBreaks: 0,
       flowSafeReturns: 0,
       pointsEarnedInSession: 0,
+      tagId: state.activeSession.tagId,
+      routineId: state.activeSession.routineId,
+      presetId: state.activeSession.presetId,
     },
   };
 };
@@ -50,13 +86,20 @@ export const triggerMovementNudge = (state: AppState): AppState => {
 };
 
 export const startBreak = (state: AppState): AppState => {
+  const now = Date.now();
+  const activeFocusSeconds = state.activeSession.focusStartedAt
+    ? Math.max(0, Math.floor((now - state.activeSession.focusStartedAt) / 1000))
+    : 0;
+
   return {
     ...state,
     activeSession: {
       ...state.activeSession,
       currentState: 'break-active',
-      lastBreakAt: Date.now(),
-      breakStartedAt: Date.now(),
+      accumulatedFocusSeconds: state.activeSession.accumulatedFocusSeconds + activeFocusSeconds,
+      focusStartedAt: null,
+      lastBreakAt: now,
+      breakStartedAt: now,
     },
   };
 };
@@ -65,7 +108,8 @@ export const delayNudge = (state: AppState): AppState => {
   // Award points for using Delay instead of Skip
   let pointsToAdd = 0;
   if (state.settings.gamificationEnabled) {
-    pointsToAdd = SCORING.useDelayNotSkip;
+    const remainingDailyPoints = Math.max(0, SCORING.dailyCap - state.dailyStats.points);
+    pointsToAdd = Math.min(SCORING.useDelayNotSkip, remainingDailyPoints);
   }
   
   return {
@@ -73,6 +117,8 @@ export const delayNudge = (state: AppState): AppState => {
     activeSession: {
       ...state.activeSession,
       currentState: 'focus',
+      focusStartedAt: Date.now(),
+      pointsEarnedInSession: state.activeSession.pointsEarnedInSession + pointsToAdd,
     },
     dailyStats: {
       ...state.dailyStats,
@@ -88,6 +134,7 @@ export const skipNudge = (state: AppState): AppState => {
     activeSession: {
       ...state.activeSession,
       currentState: 'focus',
+      focusStartedAt: Date.now(),
       skippedReminders: state.activeSession.skippedReminders + 1,
     },
     dailyStats: {
@@ -128,8 +175,8 @@ export const returnToWork = (state: AppState): AppState => {
   const { driftThresholdMinutes } = state.settings;
   
   let pointsEarned = 0;
-  let newBadges = [...state.badges];
-  let badgesEarnedThisReturn: string[] = [];
+  const newBadges = [...state.badges];
+  const badgesEarnedThisReturn: string[] = [];
   
   // Calculate break duration
   let breakDurationMins = 0;
@@ -138,6 +185,8 @@ export const returnToWork = (state: AppState): AppState => {
   }
   
   // Award points based on behavior
+  const returnedBeforeDrift = breakDurationMins < driftThresholdMinutes;
+
   if (state.settings.gamificationEnabled) {
     // Points for responding to nudge
     pointsEarned += SCORING.respondToNudge;
@@ -148,7 +197,7 @@ export const returnToWork = (state: AppState): AppState => {
     }
     
     // Bonus for returning before drift
-    if (breakDurationMins < driftThresholdMinutes) {
+    if (returnedBeforeDrift) {
       pointsEarned += SCORING.returnBeforeDrift;
       
       // Check for Flow Saver badge (return under 3 minutes)
@@ -159,12 +208,7 @@ export const returnToWork = (state: AppState): AppState => {
     }
   }
   
-  // Update streak if this is a good return
-  let newStreak = state.currentStreak;
-  if (pointsEarned > 0 && state.dailyStats.movementBreaks === 0) {
-    // Starting a new streak day
-    newStreak = state.currentStreak + 1;
-  }
+  const streak = updateStreakForActiveDay(state);
   
   // Check for Three Tiny Resets badge
   const updatedBreaksCount = state.dailyStats.movementBreaks + 1;
@@ -176,8 +220,21 @@ export const returnToWork = (state: AppState): AppState => {
     }
   }
   
+  const updatedFlowSafeReturns = state.dailyStats.flowSafeReturns + (returnedBeforeDrift ? 1 : 0);
+  if (updatedFlowSafeReturns >= 5 && !newBadges.includes('back-before-drift')) {
+    newBadges.push('back-before-drift');
+    badgesEarnedThisReturn.push('back-before-drift');
+  }
+  if (streak.currentStreak >= 5 && !newBadges.includes('five-day-streak')) {
+    newBadges.push('five-day-streak');
+    badgesEarnedThisReturn.push('five-day-streak');
+  }
+
+  const remainingDailyPoints = Math.max(0, SCORING.dailyCap - state.dailyStats.points);
+  const cappedPointsEarned = Math.min(pointsEarned, remainingDailyPoints);
+
   // Check for other badges
-  const totalPoints = state.totalPoints + pointsEarned;
+  const totalPoints = state.totalPoints + cappedPointsEarned;
   if (totalPoints >= 500 && !newBadges.includes('chair-defeated')) {
     newBadges.push('chair-defeated');
     badgesEarnedThisReturn.push('chair-defeated');
@@ -196,48 +253,70 @@ export const returnToWork = (state: AppState): AppState => {
       ...state.activeSession,
       currentState: 'focus',
       breakStartedAt: null,
+      focusStartedAt: Date.now(),
       completedBreaks: state.activeSession.completedBreaks + 1,
-      flowSafeReturns: state.activeSession.flowSafeReturns + 1,
-      pointsEarnedInSession: state.activeSession.pointsEarnedInSession + pointsEarned,
+      flowSafeReturns: state.activeSession.flowSafeReturns + (returnedBeforeDrift ? 1 : 0),
+      pointsEarnedInSession: state.activeSession.pointsEarnedInSession + cappedPointsEarned,
     },
     dailyStats: {
       ...state.dailyStats,
       movementBreaks: state.dailyStats.movementBreaks + 1,
-      flowSafeReturns: state.dailyStats.flowSafeReturns + 1,
-      points: Math.min(state.dailyStats.points + pointsEarned, SCORING.dailyCap),
+      flowSafeReturns: updatedFlowSafeReturns,
+      points: Math.min(state.dailyStats.points + cappedPointsEarned, SCORING.dailyCap),
       badgesEarned: [...state.dailyStats.badgesEarned, ...badgesEarnedThisReturn],
     },
     totalPoints: totalPoints,
-    currentStreak: newStreak,
+    currentStreak: streak.currentStreak,
+    lastActiveDate: streak.lastActiveDate,
+    lastStreakDate: streak.lastStreakDate,
     badges: newBadges,
   };
 };
 
 export const endSession = (state: AppState): AppState => {
   const { activeSession, dailyStats, sessionHistory } = state;
+  const now = Date.now();
+  const activeFocusSeconds = activeSession.currentState === 'focus' && activeSession.focusStartedAt
+    ? Math.max(0, Math.floor((now - activeSession.focusStartedAt) / 1000))
+    : 0;
+  const totalFocusMinutes = Math.max(
+    dailyStats.focusMinutes,
+    Math.floor((activeSession.accumulatedFocusSeconds + activeFocusSeconds) / 60),
+  );
   
-  // Create session summary
+  // Check for First Stand badge
+  const newBadges = [...state.badges];
+  const sessionBadges = [...dailyStats.badgesEarned];
+  if (activeSession.completedBreaks >= 1 && !state.badges.includes('first-stand')) {
+    newBadges.push('first-stand');
+    sessionBadges.push('first-stand');
+  }
+  
+  // Check for Deep Work Defender badge (90+ minute session)
+  if (totalFocusMinutes >= 90 && activeSession.completedBreaks >= 1 && 
+      !state.badges.includes('deep-work-defender')) {
+    newBadges.push('deep-work-defender');
+    sessionBadges.push('deep-work-defender');
+  }
+
+  // Create session summary after final focus and badge accounting
   const summary = {
+    id: `session-${now}`,
     date: dailyStats.date,
-    totalFocusMinutes: dailyStats.focusMinutes,
+    startedAt: activeSession.startedAt ?? now,
+    endedAt: now,
+    status: 'completed' as const,
+    durationMinutes: activeSession.startedAt ? Math.max(1, Math.round((now - activeSession.startedAt) / 60000)) : totalFocusMinutes,
+    totalFocusMinutes,
     breaksCompleted: activeSession.completedBreaks,
     nudgesSkipped: activeSession.skippedReminders,
     flowSafeReturns: activeSession.flowSafeReturns,
     pointsEarned: activeSession.pointsEarnedInSession,
-    badgesEarned: dailyStats.badgesEarned,
+    badgesEarned: sessionBadges,
+    tagId: activeSession.tagId,
+    routineId: activeSession.routineId,
+    presetId: activeSession.presetId,
   };
-  
-  // Check for First Stand badge
-  let newBadges = [...state.badges];
-  if (activeSession.completedBreaks >= 1 && !state.badges.includes('first-stand')) {
-    newBadges.push('first-stand');
-  }
-  
-  // Check for Deep Work Defender badge (90+ minute session)
-  if (dailyStats.focusMinutes >= 90 && activeSession.completedBreaks >= 1 && 
-      !state.badges.includes('deep-work-defender')) {
-    newBadges.push('deep-work-defender');
-  }
   
   return {
     ...state,
@@ -245,7 +324,13 @@ export const endSession = (state: AppState): AppState => {
       ...DEFAULT_ACTIVE_SESSION,
       currentState: 'session-complete',
     },
-    sessionHistory: [summary, ...sessionHistory].slice(0, 10), // Keep last 10 sessions
+    dailyStats: {
+      ...dailyStats,
+      focusMinutes: totalFocusMinutes,
+      badgesEarned: sessionBadges,
+    },
+    sessionHistory: [summary, ...sessionHistory].slice(0, 100),
+    lastSessionSummary: summary,
     badges: newBadges,
   };
 };
@@ -253,6 +338,10 @@ export const endSession = (state: AppState): AppState => {
 export const updateFocusTime = (state: AppState, minutes: number): AppState => {
   return {
     ...state,
+    activeSession: {
+      ...state.activeSession,
+      focusMinutesCredited: state.activeSession.focusMinutesCredited + minutes,
+    },
     dailyStats: {
       ...state.dailyStats,
       focusMinutes: state.dailyStats.focusMinutes + minutes,
