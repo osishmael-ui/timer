@@ -61,6 +61,17 @@ export const validateDailySetup = (input: DailySetupInput): string[] => {
     errors.push('Work end time must be after work start time.');
   }
 
+  // Check for commitments outside the workday window
+  input.fixedCommitments.forEach((commitment) => {
+    const start = parseTime(commitment.startTime);
+    const end = parseTime(commitment.endTime);
+    if (end > workday.start && start < workday.end) {
+      // Commitment overlaps with workday - this is fine
+    } else if (end <= workday.start || start >= workday.end) {
+      errors.push(`${commitment.title || 'Commitment'} is outside your planned work hours (${formatTime(workday.start)}-${formatTime(workday.end)}).`);
+    }
+  });
+
   return Array.from(new Set(errors));
 };
 
