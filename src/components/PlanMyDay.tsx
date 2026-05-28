@@ -824,7 +824,7 @@ const formatBlock = (block: DailyPlanBlock | null): string => block ? `${block.s
 const kindLabel = (kind: DailyPlanBlock['kind']): string => {
   if (kind === 'admin') return 'support work';
   if (kind === 'deepWork') return 'deep work';
-  if (kind === 'backupDeepWork') return 'fallback focus';
+  if (kind === 'backupDeepWork') return 'fallback (if needed)';
   if (kind === 'secondaryFocus') return 'secondary focus';
   return kind.replace(/([A-Z])/g, ' $1');
 };

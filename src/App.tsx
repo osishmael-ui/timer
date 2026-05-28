@@ -69,7 +69,7 @@ const navigationItems: Array<{
 
 const planKindLabel = (kind: DailyPlanBlock['kind']): string => {
   if (kind === 'deepWork') return 'Deep work';
-  if (kind === 'backupDeepWork') return 'Fallback focus';
+  if (kind === 'backupDeepWork') return 'Fallback (if needed)';
   if (kind === 'secondaryFocus') return 'Secondary focus';
   if (kind === 'movement') return 'Movement';
   if (kind === 'recovery') return 'Recovery';
