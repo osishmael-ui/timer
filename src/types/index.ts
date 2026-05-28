@@ -141,6 +141,13 @@ export interface GentleReminderSettings {
   lastShownDate: string | null;
 }
 
+export interface PlanStartReminder {
+  enabled: boolean;
+  remindAt: 'at-start' | '5min-before' | '10min-before' | 'none';
+  planStartTime: string | null; // ISO timestamp of when reminder was set
+  scheduledTime: number | null; // Timestamp when reminder should fire
+}
+
 export interface AppState {
   identity?: UserOwnedDataIdentity;
   settings: UserSettings;
@@ -157,6 +164,7 @@ export interface AppState {
   goals: FocusGoal[];
   routines: TimerRoutine[];
   presets: TimerPreset[];
+  planStartReminder?: PlanStartReminder;
 }
 
 export interface UserOwnedDataIdentity {

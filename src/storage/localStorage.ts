@@ -1,5 +1,5 @@
 // localStorage wrapper for Qithym data persistence
-import type { AppState, FocusGoal, SessionSummary, SessionTag, TimerPreset, TimerRoutine } from '../types';
+import type { AppState, FocusGoal, PlanStartReminder, SessionSummary, SessionTag, TimerPreset, TimerRoutine } from '../types';
 import { DEFAULT_SETTINGS, DEFAULT_ACTIVE_SESSION } from '../types';
 
 const LEGACY_STORAGE_KEY = 'standloop-state';
@@ -363,4 +363,78 @@ export const sendNotification = (title: string, body: string): void => {
       icon: '/vite.svg',
     });
   }
+};
+
+// Plan start reminder helpers
+const PLAN_REMINDER_STORAGE_KEY = 'qithym-plan-reminder';
+
+export const savePlanStartReminder = (reminder: PlanStartReminder | null): void => {
+  try {
+    if (reminder) {
+      localStorage.setItem(PLAN_REMINDER_STORAGE_KEY, JSON.stringify(reminder));
+    } else {
+      localStorage.removeItem(PLAN_REMINDER_STORAGE_KEY);
+    }
+  } catch (error) {
+    console.error('Error saving plan start reminder:', error);
+  }
+};
+
+export const loadPlanStartReminder = (): PlanStartReminder | null => {
+  try {
+    const stored = localStorage.getItem(PLAN_REMINDER_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored) as PlanStartReminder;
+    }
+  } catch (error) {
+    console.error('Error loading plan start reminder:', error);
+  }
+  return null;
+};
+
+export const clearPlanStartReminder = (): void => {
+  savePlanStartReminder(null);
+};
+
+// Schedule a reminder timeout and return a function to cancel it
+let reminderTimeoutId: number | null = null;
+
+export const schedulePlanReminder = (
+  reminder: PlanStartReminder,
+  onRemind: () => void,
+): (() => void) => {
+  // Clear any existing reminder
+  if (reminderTimeoutId !== null) {
+    window.clearTimeout(reminderTimeoutId);
+    reminderTimeoutId = null;
+  }
+
+  if (!reminder.enabled || reminder.remindAt === 'none' || reminder.scheduledTime === null) {
+    return () => {};
+  }
+
+  const now = Date.now();
+  const delay = reminder.scheduledTime - now;
+
+  // If the scheduled time is in the past, don't schedule
+  if (delay <= 0) {
+    return () => {};
+  }
+
+  // Cap delay at 24 hours max (safety check)
+  const maxDelay = 24 * 60 * 60 * 1000;
+  const safeDelay = Math.min(delay, maxDelay);
+
+  reminderTimeoutId = window.setTimeout(() => {
+    onRemind();
+    reminderTimeoutId = null;
+  }, safeDelay);
+
+  // Return cancel function
+  return () => {
+    if (reminderTimeoutId !== null) {
+      window.clearTimeout(reminderTimeoutId);
+      reminderTimeoutId = null;
+    }
+  };
 };

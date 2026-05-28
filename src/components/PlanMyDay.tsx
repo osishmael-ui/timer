@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import type { ReactNode } from 'react';
 import type {
@@ -15,9 +15,18 @@ import type {
   WorkdayLength,
   WorkType,
   DailyPlan,
+  PlanStartReminder,
 } from '../types';
 import { defaultDailySetupInput, formatTime, generateDailyPlan, parseTime, validateCommitments, validateDailySetup } from '../utils/dailyPlanner';
 import { ActionButton } from './ActionButton';
+import {
+  requestNotificationPermission,
+  sendNotification,
+  savePlanStartReminder,
+  loadPlanStartReminder,
+  clearPlanStartReminder,
+  schedulePlanReminder,
+} from '../storage/localStorage';
 
 const chronotypeOptions: Array<{ value: Chronotype; title: string; description: string }> = [
   { value: 'early', title: 'Early type', description: 'Best focus earlier in the day. Energy drops later.' },
@@ -105,6 +114,16 @@ export const PlanMyDay = ({ onStartToday, onReturnToSession, hasActiveSession = 
   const [commitmentError, setCommitmentError] = useState('');
   const [generated, setGenerated] = useState(false);
   const [hasPlanEdits, setHasPlanEdits] = useState(false);
+  const [reminderPreference, setReminderPreference] = useState<'at-start' | '5min-before' | '10min-before' | 'none'>('none');
+  const [notificationPermissionDenied, setNotificationPermissionDenied] = useState(false);
+
+  // Load saved reminder preference on mount
+  useEffect(() => {
+    const saved = loadPlanStartReminder();
+    if (saved && saved.remindAt !== 'none') {
+      setReminderPreference(saved.remindAt);
+    }
+  }, []);
 
   const validationErrors = useMemo(() => validateDailySetup(input), [input]);
 
@@ -180,7 +199,56 @@ export const PlanMyDay = ({ onStartToday, onReturnToSession, hasActiveSession = 
     }
     onReturnToSession();
   };
+
+  // Calculate if plan starts later than now and determine reminder scheduled time
+  const planStartTime = plan.mainDeepWorkBlock ? parseTime(plan.mainDeepWorkBlock.startTime) : null;
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  const planStartsLater = planStartTime !== null && planStartTime > nowMinutes;
+
+  const getReminderScheduledTime = (remindAt: 'at-start' | '5min-before' | '10min-before' | 'none'): number | null => {
+    if (!planStartTime || remindAt === 'none') return null;
+    const today = new Date();
+    const targetDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0);
+    let scheduledMinutes = planStartTime;
+    if (remindAt === '5min-before') scheduledMinutes -= 5;
+    if (remindAt === '10min-before') scheduledMinutes -= 10;
+    const scheduledHours = Math.floor(scheduledMinutes / 60);
+    const scheduledMins = scheduledMinutes % 60;
+    targetDate.setHours(scheduledHours, scheduledMins, 0, 0);
+    return targetDate.getTime();
+  };
+
   const savePlanAndStart = (planToSave: DailyPlan) => {
+    // Clear any existing reminder
+    clearPlanStartReminder();
+
+    // If plan starts later and user chose a reminder, set it up
+    if (planStartsLater && reminderPreference !== 'none') {
+      const scheduledTime = getReminderScheduledTime(reminderPreference);
+      if (scheduledTime && scheduledTime > Date.now()) {
+        const reminder: PlanStartReminder = {
+          enabled: true,
+          remindAt: reminderPreference,
+          planStartTime: new Date().toISOString(),
+          scheduledTime,
+        };
+        savePlanStartReminder(reminder);
+
+        // Request notification permission if needed
+        requestNotificationPermission().then((granted) => {
+          if (!granted) {
+            setNotificationPermissionDenied(true);
+          } else {
+            // Schedule the reminder
+            schedulePlanReminder(reminder, () => {
+              sendNotification("Time to start your focus block!", "Your planned deep-work session is ready to begin.");
+              clearPlanStartReminder();
+            });
+          }
+        });
+      }
+    }
+
     setHasPlanEdits(false);
     onStartToday(planToSave);
   };
@@ -430,6 +498,10 @@ export const PlanMyDay = ({ onStartToday, onReturnToSession, hasActiveSession = 
                   onStartToday={savePlanAndStart}
                   isEditing={hasActiveSession}
                   onCancel={hasActiveSession ? returnToSession : undefined}
+                  planStartsLater={planStartsLater}
+                  reminderPreference={reminderPreference}
+                  setReminderPreference={setReminderPreference}
+                  notificationPermissionDenied={notificationPermissionDenied}
                 />
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-5">
@@ -581,11 +653,19 @@ const PlanReview = ({
   onStartToday,
   isEditing,
   onCancel,
+  planStartsLater,
+  reminderPreference,
+  setReminderPreference,
+  notificationPermissionDenied,
 }: {
   plan: ReturnType<typeof generateDailyPlan>;
   onStartToday: (plan: DailyPlan) => void;
   isEditing: boolean;
   onCancel?: () => void;
+  planStartsLater: boolean;
+  reminderPreference: 'at-start' | '5min-before' | '10min-before' | 'none';
+  setReminderPreference: (value: 'at-start' | '5min-before' | '10min-before' | 'none') => void;
+  notificationPermissionDenied: boolean;
 }) => (
   <div className="space-y-4">
     {plan.warnings.length > 0 && (
@@ -605,6 +685,35 @@ const PlanReview = ({
       <p className="mt-2 text-sm font-semibold leading-relaxed text-charcoal/70">{plan.explanation}</p>
     </div>
     <LandscapeDailyPlan plan={plan} />
+
+    {/* Gentle reminder option - only shown if plan starts later than now */}
+    {planStartsLater && (
+      <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
+        <p className="text-sm font-black text-navy">Want a gentle reminder when it's time to start?</p>
+        <p className="mt-1 text-xs font-semibold text-charcoal/55">Choose when you'd like to be notified about your planned focus block.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {(['at-start', '5min-before', '10min-before', 'none'] as const).map((option) => (
+            <button
+              key={option}
+              onClick={() => setReminderPreference(option)}
+              className={`min-h-11 rounded-full px-3 py-2 text-sm font-black transition-colors ${
+                reminderPreference === option
+                  ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
+                  : 'bg-white text-charcoal/65 ring-1 ring-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {option === 'at-start' ? 'At start time' : option === '5min-before' ? '5 min before' : option === '10min-before' ? '10 min before' : 'No reminder'}
+            </button>
+          ))}
+        </div>
+        {notificationPermissionDenied && (
+          <p className="mt-3 text-xs font-semibold text-charcoal/55">
+            Notifications are disabled in your browser. You can still start manually from the plan when ready.
+          </p>
+        )}
+      </div>
+    )}
+
     <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-sm font-black text-navy">{isEditing ? 'Save these changes?' : 'Ready to run it?'}</p>
