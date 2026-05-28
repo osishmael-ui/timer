@@ -467,13 +467,12 @@ const StepPanel = ({
   children: ReactNode;
 }) => (
   <div
-    className="relative overflow-hidden rounded-[1.75rem] border bg-white/82 p-5 shadow-[0_18px_50px_rgba(15,30,51,0.06)] md:p-6"
+    className="relative overflow-hidden rounded-[1.75rem] border bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,30,51,0.06)] md:p-6"
     style={{
-      borderColor: tone.soft,
-      background: `linear-gradient(135deg, ${tone.soft} 0%, rgba(255,255,255,0.9) 34%, rgba(255,255,255,0.82) 100%)`,
+      borderColor: 'rgba(221, 232, 239, 0.9)',
+      backgroundColor: tone.soft,
     }}
   >
-    <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: tone.accent }} />
     <div className="flex items-start gap-3">
       <span
         className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-black text-white shadow-lg"
