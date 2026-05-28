@@ -1037,7 +1037,7 @@ function App() {
               <div className="min-w-0">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-500">Plan Stage</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-500">Focus Block</p>
                     <h2 className="mt-1 text-2xl font-black text-navy">
                       {planPosition.currentBlock ? planPosition.currentBlock.title : planPosition.nextBlock ? 'Between planned blocks' : 'Plan wrapped'}
                     </h2>
@@ -1397,9 +1397,9 @@ function App() {
       detail: 'Focus minutes, completed breaks, returns, and points are feedback signals. They show whether the day is balancing output with recovery, not whether you stayed locked in forever.',
     },
     {
-      label: 'Plan Stage',
+      label: 'Focus Block',
       value: 'Now / Next',
-      detail: 'The plan stage connects the timer to the day plan, so deep work, recovery, admin, and fixed commitments stay in their intended lanes.',
+      detail: 'The focus block connects the timer to the day plan, so deep work, recovery, admin, and fixed commitments stay in their intended lanes.',
     },
     {
       label: 'Reward',
