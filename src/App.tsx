@@ -1089,7 +1089,7 @@ function App() {
   };
 
   const renderSessionView = () => (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
       <div className="min-w-0">
         {planPosition && (
           <div className="panel-card mb-6 overflow-hidden">
@@ -1187,9 +1187,48 @@ function App() {
             <NextResetCard suggestedMovement={suggestedMovement} secondsUntilNudge={secondsUntilNudge} />
           </div>
         )}
+
+        {/* Today's Plan - Compact section below main content on mobile, hidden on desktop (shown in sidebar) */}
+        {planPosition && (
+          <div className="mt-6 panel-card xl:hidden">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today's Plan</p>
+              <span className="text-xs font-black text-charcoal/55">
+                {planPosition.completedBlocks.length} done · {planPosition.currentBlock ? '1 now' : 'between'} · {planPosition.blocks.length - planPosition.completedBlocks.length - (planPosition.currentBlock ? 1 : 0)} up
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {planPosition.blocks.slice(0, 5).map((block) => {
+                const isCurrent = planPosition.currentBlock?.id === block.id;
+                const isComplete = parseTime(block.endTime) <= currentClockMinutes;
+                return (
+                  <div key={block.id} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ring-1 ${isCurrent ? 'bg-sky-50 ring-sky-200' : isComplete ? 'bg-slate-50 ring-slate-100' : 'bg-white ring-slate-200'}`}>
+                    <div className="min-w-0">
+                      <p className={`truncate text-xs font-black ${isCurrent ? 'text-navy' : isComplete ? 'text-charcoal/50 line-through' : 'text-charcoal/70'}`}>
+                        {block.title}
+                      </p>
+                      <p className="text-[10px] font-semibold text-charcoal/45">{block.startTime}-{block.endTime}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${isCurrent ? planKindClass(block.kind) : isComplete ? 'bg-lime-100 text-lime-700' : 'bg-slate-100 text-charcoal/45'}`}>
+                      {isCurrent ? 'Now' : isComplete ? 'Done' : ''}
+                    </span>
+                  </div>
+                );
+              })}
+              {planPosition.blocks.length > 5 && (
+                <button
+                  onClick={() => setActiveView('plan')}
+                  className="w-full rounded-xl bg-slate-50 py-2 text-xs font-bold text-sky-600 hover:bg-slate-100"
+                >
+                  View all {planPosition.blocks.length} blocks →
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <aside className="flex flex-col gap-4">
+      <aside className="hidden flex-col gap-4 xl:flex">
         <div className="panel-card p-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Rhythm</p>
           <h3 className="mt-1 text-lg font-black text-navy">{state.settings.focusIntervalMinutes}m reset cadence</h3>
