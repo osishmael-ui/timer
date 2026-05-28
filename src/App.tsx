@@ -694,6 +694,66 @@ function App() {
     return { blocks, currentBlock, nextBlock, completedBlocks, activeIndex, dayProgress, blockProgress };
   })();
 
+  // Calculate time remaining in current planned block (if following a plan)
+  const currentBlockTimeRemaining = (() => {
+    if (!planPosition?.currentBlock) return null;
+    const blockEndMinutes = parseTime(planPosition.currentBlock.endTime);
+    const remainingMinutes = Math.max(0, blockEndMinutes - currentClockMinutes);
+    return remainingMinutes * 60; // Convert to seconds
+  })();
+
+  // Determine what the main timer should display
+  const mainTimerSeconds = (() => {
+    // If following a plan and currently in a focus block, show time remaining in that block
+    if (planPosition?.currentBlock && state.activeSession.currentState === 'focus') {
+      return currentBlockTimeRemaining ?? elapsedFocusSeconds;
+    }
+    // Otherwise show elapsed focus time or break time
+    return state.activeSession.currentState === 'focus' || state.activeSession.currentState === 'movement-nudge'
+      ? elapsedFocusSeconds
+      : elapsedBreakSeconds;
+  })();
+
+  // Calculate today's total focus minutes (from daily stats + current session credited minutes)
+  const todayTotalFocusMinutes = state.dailyStats.focusMinutes + state.activeSession.focusMinutesCredited;
+
+  // Get label for current block type with consistent naming
+  const getCurrentBlockLabel = (): string => {
+    if (!planPosition?.currentBlock) return 'Focus Time';
+    const kind = planPosition.currentBlock.kind;
+    if (kind === 'deepWork') return 'Deep Work Block';
+    if (kind === 'backupDeepWork') return 'Fallback Focus Block';
+    if (kind === 'secondaryFocus') return 'Secondary Focus';
+    if (kind === 'movement') return 'Movement Break';
+    if (kind === 'recovery') return 'Recovery';
+    if (kind === 'fixed') return 'Fixed Commitment';
+    return 'Admin Block';
+  };
+
+  // Determine if we should show "Next reset" or block end info
+  const shouldShowNextReset = (() => {
+    if (!planPosition?.currentBlock || state.activeSession.currentState !== 'focus') return true;
+    // Check if next reset happens before current block ends
+    const blockEndMinutes = parseTime(planPosition.currentBlock.endTime);
+    const resetTimeMinutes = currentClockMinutes + (secondsUntilNudge / 60);
+    return resetTimeMinutes < blockEndMinutes;
+  })();
+
+  // Get appropriate copy for next action
+  const getNextActionCopy = (): string => {
+    if (!planPosition?.currentBlock || state.activeSession.currentState !== 'focus') {
+      return `Next reset in ${Math.floor(secondsUntilNudge / 60)}m ${secondsUntilNudge % 60}s`;
+    }
+    const blockEndMinutes = parseTime(planPosition.currentBlock.endTime);
+    const resetTimeMinutes = currentClockMinutes + (secondsUntilNudge / 60);
+    
+    if (resetTimeMinutes >= blockEndMinutes) {
+      const minutesUntilBlockEnd = Math.max(0, Math.floor(blockEndMinutes - currentClockMinutes));
+      return `Block ends in ${minutesUntilBlockEnd}m`;
+    }
+    return `Next reset in ${Math.floor(secondsUntilNudge / 60)}m ${secondsUntilNudge % 60}s`;
+  };
+
   const rewardLevel = (() => {
     const points = state.activeSession.pointsEarnedInSession;
     if (points >= 45) return 'Momentum streak';
@@ -947,7 +1007,7 @@ function App() {
           <div className="flex flex-col justify-center">
             <div className="mb-8">
               {currentState === 'focus' ? (
-                <TimerDisplay seconds={elapsedFocusSeconds} label="Focus Time" size="lg" color="sky" />
+                <TimerDisplay seconds={mainTimerSeconds} label={getCurrentBlockLabel()} size="lg" color="sky" />
               ) : (
                 <TimerDisplay seconds={elapsedBreakSeconds} label="Break Time" size="lg" color={currentState === 'break-drifting' ? 'coral' : 'lime'} />
               )}
@@ -1011,8 +1071,8 @@ function App() {
             {currentState === 'focus' && (
               <div className="mt-6 rounded-2xl bg-slate-50 p-4">
                 <div className="flex justify-between text-xs font-semibold text-charcoal/60 mb-2">
-                  <span>Next reset</span>
-                  <span>{Math.floor(secondsUntilNudge / 60)}m {secondsUntilNudge % 60}s</span>
+                  <span>{shouldShowNextReset ? 'Next reset' : 'Block ending'}</span>
+                  <span>{getNextActionCopy()}</span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
                   <div
@@ -1102,8 +1162,8 @@ function App() {
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="rounded-2xl bg-sky-50 p-3">
-              <div className="text-2xl font-black text-sky-500">{Math.floor(elapsedFocusSeconds / 60)}</div>
-              <div className="mt-1 text-xs font-semibold text-charcoal/55">Focus min</div>
+              <div className="text-2xl font-black text-sky-500">{todayTotalFocusMinutes}</div>
+              <div className="mt-1 text-xs font-semibold text-charcoal/55">Today focus</div>
             </div>
             <div className="rounded-2xl bg-lime-50 p-3">
               <div className="text-2xl font-black text-lime-600">{state.activeSession.completedBreaks}</div>
@@ -1158,7 +1218,7 @@ function App() {
           <div className="panel-card flex flex-col p-5 xl:flex-1">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today’s Plan</p>
             <h3 className="mt-1 text-lg font-black text-navy">
-              {planPosition.completedBlocks.length}/{planPosition.blocks.length} blocks passed
+              {planPosition.completedBlocks.length} done · {planPosition.currentBlock ? '1 now' : 'Between blocks'} · {planPosition.blocks.length - planPosition.completedBlocks.length - (planPosition.currentBlock ? 1 : 0)} upcoming
             </h3>
             <div className="mt-4 max-h-[42rem] space-y-2 overflow-y-auto pr-1 xl:flex-1">
               {planPosition.blocks.map((block) => {
