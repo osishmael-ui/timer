@@ -1227,35 +1227,11 @@ function App() {
           </div>
         )}
       </div>
-
+      
       <aside className="hidden flex-col gap-4 xl:flex">
-        <div className="panel-card p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Rhythm</p>
-          <h3 className="mt-1 text-lg font-black text-navy">{state.settings.focusIntervalMinutes}m reset cadence</h3>
-          <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-500 via-lime-400 to-lavender transition-all duration-1000"
-              style={{ width: `${focusProgress}%` }}
-            />
-          </div>
-          <p className="mt-3 text-sm font-semibold text-charcoal/55">
-            {state.activeSession.active
-              ? `Next reset in ${Math.floor(secondsUntilNudge / 60)}m ${secondsUntilNudge % 60}s`
-              : 'Start a focus session to begin the reset cadence.'}
-          </p>
-        </div>
-
-        <div className="panel-card p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Break Length</p>
-          <h3 className="mt-1 text-lg font-black text-navy">{state.settings.breakDurationMinutes}m recommended</h3>
-          <p className="mt-3 text-sm font-semibold text-charcoal/55">
-            Short resets protect momentum. The app will chime when the break target is up.
-          </p>
-        </div>
-
         {planPosition && (
           <div className="panel-card flex flex-col p-5 xl:flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today’s Plan</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today's Plan</p>
             <h3 className="mt-1 text-lg font-black text-navy">
               {planPosition.completedBlocks.length} done · {planPosition.currentBlock ? '1 now' : 'Between blocks'} · {planPosition.blocks.length - planPosition.completedBlocks.length - (planPosition.currentBlock ? 1 : 0)} upcoming
             </h3>
@@ -1285,6 +1261,30 @@ function App() {
             </div>
           </div>
         )}
+
+        <div className="panel-card p-5">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Rhythm</p>
+          <h3 className="mt-1 text-lg font-black text-navy">{state.settings.focusIntervalMinutes}m reset cadence</h3>
+          <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-sky-500 via-lime-400 to-lavender transition-all duration-1000"
+              style={{ width: `${focusProgress}%` }}
+            />
+          </div>
+          <p className="mt-3 text-sm font-semibold text-charcoal/55">
+            {state.activeSession.active
+              ? `Next reset in ${Math.floor(secondsUntilNudge / 60)}m ${secondsUntilNudge % 60}s`
+              : 'Start a focus session to begin the reset cadence.'}
+          </p>
+        </div>
+
+        <div className="panel-card p-5">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Break Length</p>
+          <h3 className="mt-1 text-lg font-black text-navy">{state.settings.breakDurationMinutes}m recommended</h3>
+          <p className="mt-3 text-sm font-semibold text-charcoal/55">
+            Short resets protect momentum. The app will chime when the break target is up.
+          </p>
+        </div>
       </aside>
     </div>
   );
