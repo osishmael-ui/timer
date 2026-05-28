@@ -276,13 +276,14 @@ export const returnToWork = (state: AppState): AppState => {
 export const endSession = (state: AppState): AppState => {
   const { activeSession, dailyStats, sessionHistory } = state;
   const now = Date.now();
-  const activeFocusSeconds = activeSession.currentState === 'focus' && activeSession.focusStartedAt
+  const activeFocusSeconds = (activeSession.currentState === 'focus' || activeSession.currentState === 'movement-nudge') && activeSession.focusStartedAt
     ? Math.max(0, Math.floor((now - activeSession.focusStartedAt) / 1000))
     : 0;
-  const totalFocusMinutes = Math.max(
-    dailyStats.focusMinutes,
+  const sessionFocusMinutes = Math.max(
+    activeSession.focusMinutesCredited,
     Math.floor((activeSession.accumulatedFocusSeconds + activeFocusSeconds) / 60),
   );
+  const finalUncreditedFocusMinutes = Math.max(0, sessionFocusMinutes - activeSession.focusMinutesCredited);
   
   // Check for First Stand badge
   const newBadges = [...state.badges];
@@ -293,7 +294,7 @@ export const endSession = (state: AppState): AppState => {
   }
   
   // Check for Deep Work Defender badge (90+ minute session)
-  if (totalFocusMinutes >= 90 && activeSession.completedBreaks >= 1 && 
+  if (sessionFocusMinutes >= 90 && activeSession.completedBreaks >= 1 && 
       !state.badges.includes('deep-work-defender')) {
     newBadges.push('deep-work-defender');
     sessionBadges.push('deep-work-defender');
@@ -306,8 +307,8 @@ export const endSession = (state: AppState): AppState => {
     startedAt: activeSession.startedAt ?? now,
     endedAt: now,
     status: 'completed' as const,
-    durationMinutes: activeSession.startedAt ? Math.max(1, Math.round((now - activeSession.startedAt) / 60000)) : totalFocusMinutes,
-    totalFocusMinutes,
+    durationMinutes: activeSession.startedAt ? Math.max(1, Math.round((now - activeSession.startedAt) / 60000)) : sessionFocusMinutes,
+    totalFocusMinutes: sessionFocusMinutes,
     breaksCompleted: activeSession.completedBreaks,
     nudgesSkipped: activeSession.skippedReminders,
     flowSafeReturns: activeSession.flowSafeReturns,
@@ -326,7 +327,7 @@ export const endSession = (state: AppState): AppState => {
     },
     dailyStats: {
       ...dailyStats,
-      focusMinutes: totalFocusMinutes,
+      focusMinutes: dailyStats.focusMinutes + finalUncreditedFocusMinutes,
       badgesEarned: sessionBadges,
     },
     sessionHistory: [summary, ...sessionHistory].slice(0, 100),

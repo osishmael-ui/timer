@@ -229,5 +229,30 @@ await withMockedNow(6_000_000, () => {
   assert.ok(ended.badges.includes('deep-work-defender'));
 });
 
+await withMockedNow(7_000_000, () => {
+  const state = {
+    ...startFocusSession(makeState()),
+    activeSession: {
+      ...startFocusSession(makeState()).activeSession,
+      currentState: 'movement-nudge',
+      accumulatedFocusSeconds: 0,
+      focusMinutesCredited: 45,
+    },
+    dailyStats: {
+      date: today,
+      focusMinutes: 562,
+      movementBreaks: 0,
+      skippedReminders: 0,
+      flowSafeReturns: 0,
+      points: 0,
+      badgesEarned: [],
+    },
+  };
+  const ended = endSession(state);
+
+  assert.equal(ended.lastSessionSummary.totalFocusMinutes, 45);
+  assert.equal(ended.dailyStats.focusMinutes, 562);
+});
+
 await rm(tempDir, { recursive: true, force: true });
 console.log('stateMachine tests passed');

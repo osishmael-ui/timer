@@ -24,8 +24,8 @@ import {
   getReminderMessage,
   getSuggestedMovement,
 } from './engine/stateMachine';
-import type { AppState, DailyPlan, DailyPlanBlock, FocusGoal, SessionState, SessionTag, TimerPreset, TimerRoutine, UserSettings } from './types';
-import { SCORING } from './types';
+import type { AppState, DailyPlan, DailyPlanBlock, FocusGoal, SessionState, SessionSummary, SessionTag, TimerPreset, TimerRoutine, UserSettings } from './types';
+import { BADGES, SCORING } from './types';
 import { CompanionOrb } from './components/CompanionOrb';
 import { TimerDisplay } from './components/TimerDisplay';
 import { ActionButton } from './components/ActionButton';
@@ -48,6 +48,37 @@ type PublicRoute = MarketingRoute | 'app' | 'privacy' | 'terms' | 'reset';
 type ActiveAlert = 'movement-nudge' | 'break-complete' | 'break-drifting' | null;
 type BrowserWindowWithWebkitAudio = Window & typeof globalThis & {
   webkitAudioContext?: typeof AudioContext;
+};
+
+const sessionReflectionMessages = [
+  {
+    title: 'Progress banked.',
+    detail: 'You showed up, protected attention, and closed the loop. That is real forward motion.',
+  },
+  {
+    title: 'A solid block counts.',
+    detail: 'Even one focused session can move the day. You gave the work a clear container.',
+  },
+  {
+    title: 'You kept the promise.',
+    detail: 'The win is not doing everything. It is choosing a block, working it, and ending with intention.',
+  },
+  {
+    title: 'Momentum is still momentum.',
+    detail: 'This session added evidence that you can return to focus without forcing the whole day.',
+  },
+  {
+    title: 'Good stopping is progress.',
+    detail: 'You finished the session cleanly. That makes the next start easier, not heavier.',
+  },
+];
+
+const getSessionReceiptFocusMinutes = (summary: SessionSummary | null | undefined, fallbackFocusMinutes: number): number => {
+  if (!summary) return fallbackFocusMinutes;
+  if (summary.durationMinutes > 0 && summary.totalFocusMinutes > summary.durationMinutes) {
+    return summary.durationMinutes;
+  }
+  return summary.totalFocusMinutes;
 };
 
 const navigationItems: Array<{
@@ -776,6 +807,10 @@ function App() {
 
   const handleStartToday = useCallback((plan: DailyPlan) => {
     setCurrentPlan(plan);
+    setState((current) => startFocusSession(current));
+    setElapsedFocusSeconds(0);
+    setElapsedBreakSeconds(0);
+    setActiveAlert(null);
     setActiveView('session');
   }, []);
 
@@ -868,8 +903,7 @@ function App() {
       : elapsedBreakSeconds;
   })();
 
-  // Calculate today's total focus minutes (from daily stats + current session credited minutes)
-  const todayTotalFocusMinutes = state.dailyStats.focusMinutes + state.activeSession.focusMinutesCredited;
+  const currentSessionFocusMinutes = state.activeSession.focusMinutesCredited;
 
   // Get label for current block type with consistent naming
   const getCurrentBlockLabel = (): string => {
@@ -1064,8 +1098,9 @@ function App() {
 
     if (currentState === 'session-complete') {
       const summary = state.lastSessionSummary ?? state.sessionHistory[0];
+      const receiptFocusMinutes = getSessionReceiptFocusMinutes(summary, state.activeSession.focusMinutesCredited);
       return (
-        <div className="panel-card p-6 text-center max-w-md mx-auto sm:p-8">
+        <div className="panel-card p-6 text-center sm:p-8">
           <div className="w-20 h-20 bg-gradient-to-br from-lavender to-sky-500 rounded-3xl flex items-center justify-center mx-auto mb-4 animate-float shadow-xl shadow-sky-500/20">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
@@ -1076,7 +1111,7 @@ function App() {
           
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-sky-500/10 rounded-xl p-4">
-              <div className="text-2xl font-bold text-sky-500">{summary?.totalFocusMinutes ?? state.dailyStats.focusMinutes}</div>
+              <div className="text-2xl font-bold text-sky-500">{receiptFocusMinutes}</div>
               <div className="text-xs text-charcoal/60">Focus Minutes</div>
             </div>
             <div className="bg-lime-500/10 rounded-xl p-4">
@@ -1094,17 +1129,9 @@ function App() {
           </div>
 
           <div className="grid gap-3">
-            <ActionButton onClick={handleStartFocusSession} variant="primary" size="lg" className="w-full">
-              Start New Session
+            <ActionButton onClick={() => setActiveView('plan')} variant="primary" size="lg" className="w-full">
+              Plan Next Session
             </ActionButton>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <ActionButton onClick={() => setActiveView('rewards')} variant="secondary" size="md" className="w-full">
-                View Rewards
-              </ActionButton>
-              <ActionButton onClick={() => setActiveView('plan')} variant="secondary" size="md" className="w-full">
-                Return to Plan
-              </ActionButton>
-            </div>
           </div>
         </div>
       );
@@ -1190,10 +1217,13 @@ function App() {
                 <ActionButton onClick={handleDelayNudge} variant="secondary" size="md" className="flex-1">
                   Delay 10 min
                 </ActionButton>
-                <ActionButton onClick={handleSkipNudge} variant="danger" size="md" className="flex-1">
-                  Skip
+                <ActionButton onClick={handleSkipNudge} variant="secondary" size="md" className="flex-1">
+                  Skip and keep focusing
                 </ActionButton>
               </div>
+              <ActionButton onClick={handleEndSession} variant="secondary" size="md" className="w-full">
+                End Session
+              </ActionButton>
             </>
           )}
 
@@ -1217,6 +1247,9 @@ function App() {
               </div>
               <ActionButton onClick={handleReturnToWork} variant="primary" size="lg" className="w-full">
                 Back to Work
+              </ActionButton>
+              <ActionButton onClick={handleEndSession} variant="secondary" size="md" className="w-full">
+                End Session
               </ActionButton>
             </>
           )}
@@ -1242,10 +1275,30 @@ function App() {
     );
   };
 
-  const renderSessionView = () => (
+  const renderSessionView = () => {
+    const isSessionComplete = state.activeSession.currentState === 'session-complete';
+    const summary = state.lastSessionSummary ?? state.sessionHistory[0];
+    const receiptFocusMinutes = getSessionReceiptFocusMinutes(summary, state.activeSession.focusMinutesCredited);
+    const sessionBadgeCount = summary?.badgesEarned.length ?? 0;
+    const sessionBadges = summary?.badgesEarned
+      .map((badgeId) => BADGES.find((badge) => badge.id === badgeId))
+      .filter((badge): badge is (typeof BADGES)[number] => Boolean(badge)) ?? [];
+    const sessionReflection = sessionReflectionMessages[(summary?.startedAt ?? 0) % sessionReflectionMessages.length];
+    const sessionRewardTitle = sessionBadgeCount > 0
+      ? `${sessionBadgeCount} badge${sessionBadgeCount === 1 ? '' : 's'} earned`
+      : (summary?.pointsEarned ?? 0) > 0
+        ? `${summary?.pointsEarned ?? 0} points earned`
+        : 'Progress saved';
+    const sessionRewardCopy = sessionBadgeCount > 0
+      ? 'New reward progress was added from this session.'
+      : (summary?.pointsEarned ?? 0) > 0
+        ? 'Those points came from choices inside this session, not from the whole day.'
+        : `You protected ${receiptFocusMinutes} minutes. That still counts.`;
+
+    return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
       <div className="min-w-0">
-        {planPosition && (
+        {!isSessionComplete && planPosition && (
           <div className="panel-card mb-6 overflow-hidden">
             <div className="grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_220px] md:p-6">
               <div className="min-w-0">
@@ -1298,6 +1351,7 @@ function App() {
           </div>
         )}
 
+        {!isSessionComplete && (
         <div className="panel-card mb-6 p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -1316,8 +1370,8 @@ function App() {
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="rounded-2xl bg-sky-50 p-3">
-              <div className="text-2xl font-black text-sky-500">{todayTotalFocusMinutes}</div>
-              <div className="mt-1 text-xs font-semibold text-charcoal/55">Today focus</div>
+              <div className="text-2xl font-black text-sky-500">{currentSessionFocusMinutes}</div>
+              <div className="mt-1 text-xs font-semibold text-charcoal/55">Session focus</div>
             </div>
             <div className="rounded-2xl bg-lime-50 p-3">
               <div className="text-2xl font-black text-lime-600">{state.activeSession.completedBreaks}</div>
@@ -1333,6 +1387,7 @@ function App() {
             </div>
           </div>
         </div>
+        )}
 
         {renderMainContent()}
 
@@ -1348,19 +1403,55 @@ function App() {
         )}
 
         {/* Today's Plan - Compact section below main content on mobile */}
-        {planPosition && (
+        {!isSessionComplete && planPosition && (
           <MobileTodayPlan planPosition={planPosition} onViewPlan={() => setActiveView('plan')} />
         )}
       </div>
       
       <aside className="hidden flex-col gap-4 xl:flex">
-        {/* Today's Plan Sidebar - Always visible above other cards */}
-        {planPosition ? (
+        {isSessionComplete ? (
+          <>
+            <div className="panel-card p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Session Reward</p>
+              <h3 className="mt-2 text-xl font-black text-navy">{sessionRewardTitle}</h3>
+              <p className="mt-3 text-sm font-semibold leading-relaxed text-charcoal/60">
+                {sessionRewardCopy}
+              </p>
+              {sessionBadgeCount > 0 && (
+                <div className="mt-4 space-y-2">
+                  {sessionBadges.slice(0, 3).map((badge) => (
+                    <div key={badge.id} className="flex items-center gap-3 rounded-2xl bg-lime-50 px-3 py-2 text-sm font-black text-lime-700">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-xl shadow-sm shadow-lime-100">
+                        {badge.icon}
+                      </span>
+                      <span>{badge.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => setActiveView('rewards')}
+                className="mt-5 min-h-10 w-full rounded-full bg-white px-4 text-sm font-black text-sky-600 ring-1 ring-sky-100 transition-colors hover:bg-sky-50"
+              >
+                See all my rewards
+              </button>
+            </div>
+            <div className="panel-card p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Reflection</p>
+              <h3 className="mt-2 text-xl font-black text-navy">{sessionReflection.title}</h3>
+              <p className="mt-3 text-sm font-semibold leading-relaxed text-charcoal/60">
+                {sessionReflection.detail}
+              </p>
+            </div>
+          </>
+        ) : planPosition ? (
           <TodayPlanSidebar planPosition={planPosition} />
         ) : (
           <NoPlanSidebar />
         )}
 
+        {!isSessionComplete && (
+          <>
         <RhythmCard 
           focusIntervalMinutes={state.settings.focusIntervalMinutes}
           secondsUntilNudge={secondsUntilNudge}
@@ -1368,9 +1459,12 @@ function App() {
         />
 
         <BreakLengthCard breakDurationMinutes={state.settings.breakDurationMinutes} />
+          </>
+        )}
       </aside>
     </div>
-  );
+    );
+  };
 
   const renderProgressView = () => (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
