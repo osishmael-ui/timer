@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { loadState, saveState, clearAllData, sendNotification, requestNotificationPermission, exportStateJson, parseImportedState } from './storage/localStorage';
 import {
   deleteAccount,
@@ -96,6 +96,160 @@ const formatPlanDuration = (block: DailyPlanBlock): string => {
   }
   return `${minutes}m`;
 };
+
+// Helper components for Today's Plan sidebar and mobile views
+interface PlanPosition {
+  blocks: DailyPlanBlock[];
+  currentBlock: DailyPlanBlock | null;
+  nextBlock: DailyPlanBlock | null;
+  completedBlocks: DailyPlanBlock[];
+  activeIndex: number;
+  dayProgress: number;
+  blockProgress: number;
+}
+
+interface MobileTodayPlanProps {
+  planPosition: PlanPosition;
+  onViewPlan: () => void;
+}
+
+const MobileTodayPlan: React.FC<MobileTodayPlanProps> = ({ planPosition, onViewPlan }) => {
+  const currentClockMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  
+  return (
+    <div className="mt-6 panel-card xl:hidden">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today's Plan</p>
+        <span className="text-xs font-black text-charcoal/55">
+          {planPosition.completedBlocks.length} done · {planPosition.currentBlock ? '1 now' : 'between'} · {planPosition.blocks.length - planPosition.completedBlocks.length - (planPosition.currentBlock ? 1 : 0)} up
+        </span>
+      </div>
+      <div className="mt-3 space-y-2">
+        {planPosition.blocks.slice(0, 5).map((block) => {
+          const isCurrent = planPosition.currentBlock?.id === block.id;
+          const isComplete = parseTime(block.endTime) <= currentClockMinutes;
+          return (
+            <div key={block.id} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ring-1 ${isCurrent ? 'bg-sky-50 ring-sky-200' : isComplete ? 'bg-slate-50 ring-slate-100' : 'bg-white ring-slate-200'}`}>
+              <div className="min-w-0">
+                <p className={`truncate text-xs font-black ${isCurrent ? 'text-navy' : isComplete ? 'text-charcoal/50 line-through' : 'text-charcoal/70'}`}>
+                  {block.title}
+                </p>
+                <p className="text-[10px] font-semibold text-charcoal/45">{block.startTime}-{block.endTime}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${isCurrent ? planKindClass(block.kind) : isComplete ? 'bg-lime-100 text-lime-700' : 'bg-slate-100 text-charcoal/45'}`}>
+                {isCurrent ? 'Now' : isComplete ? 'Done' : ''}
+              </span>
+            </div>
+          );
+        })}
+        {planPosition.blocks.length > 5 && (
+          <button
+            onClick={onViewPlan}
+            className="w-full rounded-xl bg-slate-50 py-2 text-xs font-bold text-sky-600 hover:bg-slate-100"
+          >
+            View all {planPosition.blocks.length} blocks →
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+interface TodayPlanSidebarProps {
+  planPosition: PlanPosition;
+}
+
+const TodayPlanSidebar: React.FC<TodayPlanSidebarProps> = ({ planPosition }) => {
+  const currentClockMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  
+  return (
+    <div className="panel-card flex flex-col p-5 xl:flex-1">
+      <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today's Plan</p>
+      <h3 className="mt-1 text-lg font-black text-navy">
+        {planPosition.completedBlocks.length} done · {planPosition.currentBlock ? '1 now' : 'Between blocks'} · {planPosition.blocks.length - planPosition.completedBlocks.length - (planPosition.currentBlock ? 1 : 0)} upcoming
+      </h3>
+      <div className="mt-4 max-h-[42rem] space-y-2 overflow-y-auto pr-1 xl:flex-1">
+        {planPosition.blocks.map((block) => {
+          const isCurrent = planPosition.currentBlock?.id === block.id;
+          const isComplete = parseTime(block.endTime) <= currentClockMinutes;
+          return (
+            <div key={block.id} className={`rounded-2xl p-3 ring-1 ${isCurrent ? 'bg-sky-50 ring-sky-200' : 'bg-white/80 ring-slate-200'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-navy">{block.title}</p>
+                  <p className="mt-1 text-xs font-semibold text-charcoal/55">{block.startTime}-{block.endTime} · {formatPlanDuration(block)}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${isCurrent ? planKindClass(block.kind) : isComplete ? 'bg-lime-100 text-lime-700' : 'bg-slate-100 text-charcoal/55'}`}>
+                  {isCurrent ? 'Now' : isComplete ? 'Done' : planKindLabel(block.kind)}
+                </span>
+              </div>
+              {isCurrent && (
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-sky-100">
+                  <div className="h-full rounded-full bg-sky-500" style={{ width: `${planPosition.blockProgress}%` }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const NoPlanSidebar: React.FC = () => (
+  <div className="panel-card p-5">
+    <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today's Plan</p>
+    <h3 className="mt-1 text-lg font-black text-navy">No plan for today yet</h3>
+    <p className="mt-3 text-sm font-semibold text-charcoal/55">
+      Create a plan to see your focus blocks, movement breaks, and recovery time laid out for the day.
+    </p>
+    <a
+      href="#app"
+      onClick={(e) => { e.preventDefault(); window.location.hash = '#app'; }}
+      className="mt-4 inline-block rounded-full bg-sky-500 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-sky-600"
+    >
+      Plan My Day
+    </a>
+  </div>
+);
+
+interface RhythmCardProps {
+  focusIntervalMinutes: number;
+  secondsUntilNudge: number;
+  activeSession: AppState['activeSession'];
+}
+
+const RhythmCard: React.FC<RhythmCardProps> = ({ focusIntervalMinutes, secondsUntilNudge, activeSession }) => (
+  <div className="panel-card p-5">
+    <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Rhythm</p>
+    <h3 className="mt-1 text-lg font-black text-navy">{focusIntervalMinutes}m reset cadence</h3>
+    <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-sky-500 via-lime-400 to-lavender transition-all duration-1000"
+        style={{ width: `${focusIntervalMinutes > 0 ? ((focusIntervalMinutes * 60 - secondsUntilNudge) / (focusIntervalMinutes * 60)) * 100 : 0}%` }}
+      />
+    </div>
+    <p className="mt-3 text-sm font-semibold text-charcoal/55">
+      {activeSession.active
+        ? `Next reset in ${Math.floor(secondsUntilNudge / 60)}m ${secondsUntilNudge % 60}s`
+        : 'Start a focus session to begin the reset cadence.'}
+    </p>
+  </div>
+);
+
+interface BreakLengthCardProps {
+  breakDurationMinutes: number;
+}
+
+const BreakLengthCard: React.FC<BreakLengthCardProps> = ({ breakDurationMinutes }) => (
+  <div className="panel-card p-5">
+    <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Break Length</p>
+    <h3 className="mt-1 text-lg font-black text-navy">{breakDurationMinutes}m recommended</h3>
+    <p className="mt-3 text-sm font-semibold text-charcoal/55">
+      Short resets protect momentum. The app will chime when the break target is up.
+    </p>
+  </div>
+);
 
 const formatDateKey = (date: Date): string => date.toISOString().split('T')[0];
 
@@ -1184,107 +1338,36 @@ function App() {
 
         {state.activeSession.active && state.activeSession.currentState === 'focus' && (
           <div className="mt-6">
-            <NextResetCard suggestedMovement={suggestedMovement} secondsUntilNudge={secondsUntilNudge} />
+            <NextResetCard 
+              suggestedMovement={suggestedMovement} 
+              secondsUntilNudge={secondsUntilNudge}
+              currentBlock={planPosition?.currentBlock ?? null}
+              currentClockMinutes={currentClockMinutes}
+            />
           </div>
         )}
 
-        {/* Today's Plan - Compact section below main content on mobile, hidden on desktop (shown in sidebar) */}
+        {/* Today's Plan - Compact section below main content on mobile */}
         {planPosition && (
-          <div className="mt-6 panel-card xl:hidden">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today's Plan</p>
-              <span className="text-xs font-black text-charcoal/55">
-                {planPosition.completedBlocks.length} done · {planPosition.currentBlock ? '1 now' : 'between'} · {planPosition.blocks.length - planPosition.completedBlocks.length - (planPosition.currentBlock ? 1 : 0)} up
-              </span>
-            </div>
-            <div className="mt-3 space-y-2">
-              {planPosition.blocks.slice(0, 5).map((block) => {
-                const isCurrent = planPosition.currentBlock?.id === block.id;
-                const isComplete = parseTime(block.endTime) <= currentClockMinutes;
-                return (
-                  <div key={block.id} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ring-1 ${isCurrent ? 'bg-sky-50 ring-sky-200' : isComplete ? 'bg-slate-50 ring-slate-100' : 'bg-white ring-slate-200'}`}>
-                    <div className="min-w-0">
-                      <p className={`truncate text-xs font-black ${isCurrent ? 'text-navy' : isComplete ? 'text-charcoal/50 line-through' : 'text-charcoal/70'}`}>
-                        {block.title}
-                      </p>
-                      <p className="text-[10px] font-semibold text-charcoal/45">{block.startTime}-{block.endTime}</p>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${isCurrent ? planKindClass(block.kind) : isComplete ? 'bg-lime-100 text-lime-700' : 'bg-slate-100 text-charcoal/45'}`}>
-                      {isCurrent ? 'Now' : isComplete ? 'Done' : ''}
-                    </span>
-                  </div>
-                );
-              })}
-              {planPosition.blocks.length > 5 && (
-                <button
-                  onClick={() => setActiveView('plan')}
-                  className="w-full rounded-xl bg-slate-50 py-2 text-xs font-bold text-sky-600 hover:bg-slate-100"
-                >
-                  View all {planPosition.blocks.length} blocks →
-                </button>
-              )}
-            </div>
-          </div>
+          <MobileTodayPlan planPosition={planPosition} onViewPlan={() => setActiveView('plan')} />
         )}
       </div>
       
       <aside className="hidden flex-col gap-4 xl:flex">
-        {planPosition && (
-          <div className="panel-card flex flex-col p-5 xl:flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Today's Plan</p>
-            <h3 className="mt-1 text-lg font-black text-navy">
-              {planPosition.completedBlocks.length} done · {planPosition.currentBlock ? '1 now' : 'Between blocks'} · {planPosition.blocks.length - planPosition.completedBlocks.length - (planPosition.currentBlock ? 1 : 0)} upcoming
-            </h3>
-            <div className="mt-4 max-h-[42rem] space-y-2 overflow-y-auto pr-1 xl:flex-1">
-              {planPosition.blocks.map((block) => {
-                const isCurrent = planPosition.currentBlock?.id === block.id;
-                const isComplete = parseTime(block.endTime) <= currentClockMinutes;
-                return (
-                  <div key={block.id} className={`rounded-2xl p-3 ring-1 ${isCurrent ? 'bg-sky-50 ring-sky-200' : 'bg-white/80 ring-slate-200'}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-navy">{block.title}</p>
-                        <p className="mt-1 text-xs font-semibold text-charcoal/55">{block.startTime}-{block.endTime} · {formatPlanDuration(block)}</p>
-                      </div>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${isCurrent ? planKindClass(block.kind) : isComplete ? 'bg-lime-100 text-lime-700' : 'bg-slate-100 text-charcoal/55'}`}>
-                        {isCurrent ? 'Now' : isComplete ? 'Done' : planKindLabel(block.kind)}
-                      </span>
-                    </div>
-                    {isCurrent && (
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-sky-100">
-                        <div className="h-full rounded-full bg-sky-500" style={{ width: `${planPosition.blockProgress}%` }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {/* Today's Plan Sidebar - Always visible above other cards */}
+        {planPosition ? (
+          <TodayPlanSidebar planPosition={planPosition} />
+        ) : (
+          <NoPlanSidebar />
         )}
 
-        <div className="panel-card p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Rhythm</p>
-          <h3 className="mt-1 text-lg font-black text-navy">{state.settings.focusIntervalMinutes}m reset cadence</h3>
-          <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-500 via-lime-400 to-lavender transition-all duration-1000"
-              style={{ width: `${focusProgress}%` }}
-            />
-          </div>
-          <p className="mt-3 text-sm font-semibold text-charcoal/55">
-            {state.activeSession.active
-              ? `Next reset in ${Math.floor(secondsUntilNudge / 60)}m ${secondsUntilNudge % 60}s`
-              : 'Start a focus session to begin the reset cadence.'}
-          </p>
-        </div>
+        <RhythmCard 
+          focusIntervalMinutes={state.settings.focusIntervalMinutes}
+          secondsUntilNudge={secondsUntilNudge}
+          activeSession={state.activeSession}
+        />
 
-        <div className="panel-card p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Break Length</p>
-          <h3 className="mt-1 text-lg font-black text-navy">{state.settings.breakDurationMinutes}m recommended</h3>
-          <p className="mt-3 text-sm font-semibold text-charcoal/55">
-            Short resets protect momentum. The app will chime when the break target is up.
-          </p>
-        </div>
+        <BreakLengthCard breakDurationMinutes={state.settings.breakDurationMinutes} />
       </aside>
     </div>
   );

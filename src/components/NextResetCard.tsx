@@ -1,13 +1,19 @@
 import React from 'react';
+import type { DailyPlanBlock } from '../types';
+import { parseTime } from '../utils/dailyPlanner';
 
 interface NextResetCardProps {
   suggestedMovement: string;
   secondsUntilNudge: number;
+  currentBlock?: DailyPlanBlock | null;
+  currentClockMinutes?: number;
 }
 
 export const NextResetCard: React.FC<NextResetCardProps> = ({
   suggestedMovement,
   secondsUntilNudge,
+  currentBlock = null,
+  currentClockMinutes = 0,
 }) => {
   const formatTime = (totalSeconds: number): string => {
     const mins = Math.floor(totalSeconds / 60);
@@ -17,6 +23,22 @@ export const NextResetCard: React.FC<NextResetCardProps> = ({
     }
     return `${secs}s`;
   };
+
+  // Calculate if next reset happens before block ends
+  const showBlockEndInfo = currentBlock !== null && currentClockMinutes !== undefined;
+  let displayMessage = `in ${formatTime(secondsUntilNudge)}`;
+  
+  if (showBlockEndInfo && currentBlock) {
+    const blockEndMinutes = parseTime(currentBlock.endTime);
+    const resetTimeMinutes = currentClockMinutes + (secondsUntilNudge / 60);
+    
+    if (resetTimeMinutes >= blockEndMinutes) {
+      const minutesUntilBlockEnd = Math.max(0, Math.floor(blockEndMinutes - currentClockMinutes));
+      displayMessage = `Block ends in ${minutesUntilBlockEnd}m`;
+    } else {
+      displayMessage = `in ${formatTime(secondsUntilNudge)}`;
+    }
+  }
 
   return (
     <div className="panel-card p-5">
@@ -32,7 +54,7 @@ export const NextResetCard: React.FC<NextResetCardProps> = ({
             {suggestedMovement}
           </p>
           <p className="text-sm font-semibold text-charcoal/55 mt-0.5">
-            in {formatTime(secondsUntilNudge)}
+            {displayMessage}
           </p>
         </div>
       </div>
