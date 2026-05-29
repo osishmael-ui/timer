@@ -296,7 +296,7 @@ export const PlanMyDay = ({ onStartToday, onReturnToSession, hasActiveSession = 
         </div>
       </div>
 
-      <div className={`grid gap-6 p-5 md:p-6 ${showLandscapeReview ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(0,1fr)_380px]'}`}>
+      <div className={`grid gap-6 p-5 md:p-6 ${showLandscapeReview ? 'lg:grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_280px]'}`}>
         <div className="min-w-0">
           {step === 0 && (
             <StepPanel stepIndex={0} tone={plannerSteps[0]} title="Chronotype" subtitle="Pick the closest match. This is about timing, not identity.">
