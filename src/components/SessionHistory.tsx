@@ -13,7 +13,7 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({ history }) => {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-charcoal/45">Activity</p>
           <h3 className="mt-1 text-lg font-black text-navy">Recent Sessions</h3>
         </div>
-        <div className="rounded-2xl border border-dashed border-slate-200 py-8 text-center text-charcoal/50">
+        <div className="rounded-[20px] border border-dashed border-slate-200 bg-white/75 py-8 text-center text-charcoal/50">
           <p className="text-sm font-bold">No sessions yet.</p>
           <p className="text-xs mt-1">Start your first focus session.</p>
         </div>
@@ -31,7 +31,7 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({ history }) => {
         {history.slice(0, 5).map((session, index) => (
           <div
             key={index}
-            className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-3 transition-colors hover:bg-white sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-3 rounded-[20px] bg-slate-50 p-4 transition-colors hover:bg-white"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-lavender rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-md shadow-sky-500/10">

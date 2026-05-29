@@ -1,3 +1,18 @@
 ```
+# Dependencies
+node_modules/
+
+# Build artifacts
 dist/
+
+# Compiled/Generated files
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
 ```

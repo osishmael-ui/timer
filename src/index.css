@@ -237,7 +237,7 @@ body {
 
 .panel-card {
   border: 1px solid rgba(255, 255, 255, 0.84);
-  border-radius: 1.5rem;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.09);
   backdrop-filter: blur(18px);
@@ -249,11 +249,11 @@ body {
   min-height: 120px;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 16px;
   border: 1px solid rgba(255, 255, 255, 0.86);
-  border-radius: 1.25rem;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.86);
-  padding: 1.1rem 1.2rem;
+  padding: 18px 20px;
   box-shadow: 0 18px 44px rgba(15, 23, 42, 0.07);
 }
 
