@@ -39,20 +39,20 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           <span className="text-sm font-black text-navy">{completionRate}%</span>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-sky-50 p-3">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-2xl bg-sky-50 p-4">
           <div className="text-2xl font-black text-sky-500">{moveScore}</div>
           <div className="mt-1 text-xs font-semibold text-charcoal/55">Move Score</div>
         </div>
-        <div className="rounded-2xl bg-orange-50 p-3">
+        <div className="rounded-2xl bg-orange-50 p-4">
           <div className="text-2xl font-black text-coral-500">{streak}</div>
           <div className="mt-1 text-xs font-semibold text-charcoal/55">Day Streak</div>
         </div>
-        <div className="rounded-2xl bg-lime-50 p-3">
+        <div className="rounded-2xl bg-lime-50 p-4">
           <div className="text-2xl font-black text-lime-600">{breaksCompleted}</div>
           <div className="mt-1 text-xs font-semibold text-charcoal/55">Breaks Done</div>
         </div>
-        <div className="rounded-2xl bg-violet-50 p-3">
+        <div className="rounded-2xl bg-violet-50 p-4">
           <div className="text-2xl font-black text-violet-500">{flowSafeReturns}</div>
           <div className="mt-1 text-xs font-semibold text-charcoal/55">Flow Returns</div>
         </div>
