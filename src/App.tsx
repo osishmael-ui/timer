@@ -337,6 +337,8 @@ function App() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(() => (
     'Notification' in window ? Notification.permission : 'unsupported'
   ));
+  const [waitingForPlanStart, setWaitingForPlanStart] = useState(false);
+  const [planStartTimeMs, setPlanStartTimeMs] = useState<number | null>(null);
   const breakTargetAlertedRef = useRef(false);
   const lastStateAlertRef = useRef<SessionState>('idle');
 
@@ -807,6 +809,26 @@ function App() {
 
   const handleStartToday = useCallback((plan: DailyPlan) => {
     setCurrentPlan(plan);
+    
+    // Get the first focus block start time from the plan
+    const firstFocusBlock = plan.mainDeepWorkBlock || plan.backupDeepWorkBlock || plan.secondaryFocusBlock;
+    
+    if (firstFocusBlock) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const [hours, minutes] = firstFocusBlock.startTime.split(':').map(Number);
+      const firstBlockStartTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
+      
+      // If the first block is in the future, wait until then to start
+      if (firstBlockStartTime.getTime() > now.getTime()) {
+        setWaitingForPlanStart(true);
+        setPlanStartTimeMs(firstBlockStartTime.getTime());
+        setActiveView('session');
+        return;
+      }
+    }
+    
+    // Otherwise, start immediately (late start or no specific start time)
     setState((current) => startFocusSession(current));
     setElapsedFocusSeconds(0);
     setElapsedBreakSeconds(0);
