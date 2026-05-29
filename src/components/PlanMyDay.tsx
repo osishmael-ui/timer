@@ -621,7 +621,7 @@ const DailyPlanCard = ({ plan, generated }: { plan: ReturnType<typeof generateDa
       <aside className="rounded-3xl border border-dashed border-slate-200 bg-white/55 p-5 lg:sticky lg:top-5 lg:self-start">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-charcoal/35">Daily Plan</p>
         <p className="mt-2 text-sm font-semibold leading-relaxed text-charcoal/50">
-          Your generated rhythm will appear here after setup.
+          You've got this. A clear plan + your energy = a productive day.
         </p>
       </aside>
     );
